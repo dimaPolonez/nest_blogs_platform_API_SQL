@@ -1,7 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { SuperAdminRepository } from '../../repository/super-admin.repository';
 import { UserModel, UserModelType } from '../../../../core/entity';
-import { CreateUserType } from '../../../../core/models';
+import { CreateUserType, NewUserDTOType } from '../../../../core/models';
 import { BcryptAdapter } from '../../../../adapters';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -26,11 +26,13 @@ export class CreateUserUseCase implements ICommandHandler<CreateUserCommand> {
       userDTO.password,
     );
 
-    const newUserDTO = {
+    const newUserDTO: NewUserDTOType = {
       login: userDTO.login,
       hushPass: hushPass,
       email: userDTO.email,
     };
+
+    await this.superAdminRepository.createUser(newUserDTO);
 
     const createUserSmart: UserModelType = await new this.UserModel(newUserDTO);
 

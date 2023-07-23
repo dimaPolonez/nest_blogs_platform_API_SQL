@@ -12,13 +12,18 @@ import {
   UserModelType,
 } from '../../../core/entity';
 import {
+  NewUserDTOType,
   UpdateArrayCommentsType,
   UpdateArrayPostsType,
 } from '../../../core/models';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class SuperAdminRepository {
   constructor(
+    @InjectDataSource()
+    protected dataSource: DataSource,
     @InjectModel(BlogModel.name)
     private readonly BlogModel: Model<BlogModelType>,
     @InjectModel(PostModel.name)
@@ -29,6 +34,11 @@ export class SuperAdminRepository {
     private readonly UserModel: Model<UserModelType>,
   ) {}
 
+  async createUser(newUserDTO: NewUserDTOType) {
+    await this.dataSource.query(
+      'INSERT INTO "Users" ("login","hushPass", "email") VALUES ()',
+    );
+  }
   async banedActivityUser(isBanned: boolean, userID: string) {
     await this.CommentModel.updateMany(
       {
