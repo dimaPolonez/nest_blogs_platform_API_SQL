@@ -10,6 +10,10 @@ export const CONFIG = {
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
   HTTP_BASIC_USER: process.env.HTTP_BASIC_USER,
   HTTP_BASIC_PASS: process.env.HTTP_BASIC_PASS,
+  PGHOST: process.env.PGHOST,
+  PGDATABASE: process.env.PGDATABASE,
+  PGUSER: process.env.PGUSER,
+  PGPASSWORD: process.env.PGPASSWORD,
   EXPIRES_ACCESS: 540,
   EXPIRES_REFRESH: 5400,
 };
