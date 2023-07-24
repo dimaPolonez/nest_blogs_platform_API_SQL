@@ -28,10 +28,11 @@ import { BlogsModule } from '../../public/blogs/blogs.module';
 import { BcryptAdapter } from '../../adapters';
 import { SuperAdminService } from './application/super-admin.service';
 import { AuthModule } from '../../auth/auth.module';
+import { ValidIdPipe } from '../../validation/pipes/validId.pipe';
 
 const modules = [CqrsModule, AuthModule, BlogsModule];
 
-const pipes = [BlogIdPipe, UserIdPipe];
+const pipes = [BlogIdPipe, UserIdPipe, ValidIdPipe];
 
 const adapters = [BcryptAdapter];
 

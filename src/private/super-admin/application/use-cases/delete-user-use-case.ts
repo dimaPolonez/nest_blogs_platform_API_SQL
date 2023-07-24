@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { SuperAdminRepository } from '../../repository/super-admin.repository';
-import { UserModelType } from '../../../../core/entity';
 import { NotFoundException } from '@nestjs/common';
 
 export class DeleteUserCommand {
@@ -14,13 +13,12 @@ export class DeleteUserUseCase implements ICommandHandler<DeleteUserCommand> {
   async execute(command: DeleteUserCommand) {
     const { userID } = command;
 
-    const findUser: UserModelType =
-      await this.superAdminRepository.findUserById(userID);
+    const resultDelete: number = await this.superAdminRepository.deleteUser(
+      userID,
+    );
 
-    if (!findUser) {
-      throw new NotFoundException('user not found');
+    if (!resultDelete) {
+      throw new NotFoundException();
     }
-
-    await this.superAdminRepository.deleteUser(userID);
   }
 }

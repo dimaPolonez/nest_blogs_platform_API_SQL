@@ -12,7 +12,9 @@ import {
   UserModelType,
 } from '../../../core/entity';
 import {
+  BanUserType,
   NewUserDTOType,
+  TablesNames,
   UpdateArrayCommentsType,
   UpdateArrayPostsType,
   UsersTableType,
@@ -36,22 +38,23 @@ export class SuperAdminRepository {
   ) {}
 
   async createUser(newUserDTO: NewUserDTOType): Promise<UsersTableType[]> {
-    const text = `INSERT INTO "Users"(login, "hushPass", email) VALUES($1, $2, $3) RETURNING *`;
+    const text = `INSERT INTO "${TablesNames.Users}"(login, "hushPass", email) VALUES($1, $2, $3) RETURNING *`;
     const values = [newUserDTO.login, newUserDTO.hushPass, newUserDTO.email];
 
     return await this.dataSource.query(text, values);
   }
-  async banedActivityUser(isBanned: boolean, userID: string) {
-    await this.CommentModel.updateMany(
-      {
-        'commentatorInfo.userId': userID,
-      },
-      { $set: { 'commentatorInfo.isBanned': isBanned } },
-    );
+  async banedUser(banUserDTO: BanUserType, userID: string): Promise<number> {
+    let text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, "banDate" = NOW(), "banReason" = $2 WHERE "userId" = $3`;
+    let values = [banUserDTO.isBanned, banUserDTO.banReason, userID];
 
-    if (isBanned === true) {
-      await this.UserModel.updateOne({ _id: userID }, { sessionsUser: [] });
+    if (banUserDTO.isBanned === false) {
+      text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = false, "banDate" = null, "banReason" = null WHERE "userId" = $1`;
+      values = [userID];
     }
+
+    const result = await this.dataSource.query(text, values);
+
+    return result[1];
   }
 
   async banedBlog(isBanned: boolean, blogID: string) {
@@ -136,8 +139,20 @@ export class SuperAdminRepository {
     return this.UserModel.findById({ _id: userID });
   }
 
-  async deleteUser(userID: string) {
-    await this.UserModel.deleteOne({ _id: userID });
+  async findUserByIdSql(userID: string): Promise<UsersTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "userId" = $1`;
+    const values = [userID];
+
+    return await this.dataSource.query(text, values);
+  }
+
+  async deleteUser(userID: string): Promise<number> {
+    const text = `DELETE FROM "${TablesNames.Users}" WHERE "userId" = $1`;
+    const values = [userID];
+
+    const result = await this.dataSource.query(text, values);
+
+    return result[1];
   }
 
   async save(model: BlogModelType | PostModelType | UserModelType) {
@@ -145,23 +160,24 @@ export class SuperAdminRepository {
   }
 
   async deleteAllCollections() {
-    /*    const tablesArray = [
-      'Users',
-      'Blogs',
-      'Posts',
-      'Comments',
-      'SessionsUsersInfo',
-      'BanAllUsersOfBlogInfo',
-      'ExtendedLikesInfo',
+    const tablesArray: TablesNames[] = [
+      TablesNames.Users,
+      TablesNames.Blogs,
+      TablesNames.Posts,
+      TablesNames.Comments,
+      TablesNames.SessionsUsersInfo,
+      TablesNames.BanAllUsersOfBlogInfo,
+      TablesNames.ExtendedLikesInfo,
     ];
 
     await tablesArray.forEach((nameTable) => {
-      const text = `DELETE FROM "Blogs"`;
-      this.dataSource.query(text);
-    });*/
-
-    const text = `DELETE FROM "Blogs"`;
-    await this.dataSource.query(text);
+      const textArray = [
+        `DELETE FROM "${nameTable}"`,
+        `TRUNCATE TABLE "${nameTable}" RESTART IDENTITY`,
+      ];
+      this.dataSource.query(textArray[0]);
+      this.dataSource.query(textArray[1]);
+    });
 
     await this.BlogModel.deleteMany();
     await this.PostModel.deleteMany();

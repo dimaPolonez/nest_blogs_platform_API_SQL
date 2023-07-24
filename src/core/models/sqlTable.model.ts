@@ -1,5 +1,15 @@
 import { EntityLikes, MyLikeStatus } from './getPost.model';
 
+export enum TablesNames {
+  Users = 'Users',
+  Blogs = 'Blogs',
+  Posts = 'Posts',
+  Comments = 'Comments',
+  SessionsUsersInfo = 'SessionsUsersInfo',
+  BanAllUsersOfBlogInfo = 'BanAllUsersOfBlogInfo',
+  ExtendedLikesInfo = 'ExtendedLikesInfo',
+}
+
 export type UsersTableType = {
   userId: string;
   login: string;

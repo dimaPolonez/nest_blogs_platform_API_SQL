@@ -36,6 +36,7 @@ import {
   CreateUserDto,
   QueryUsersAdminDto,
 } from '../../core/dto/users';
+import { ValidIdPipe } from '../../validation/pipes/validId.pipe';
 
 @Controller('sa')
 export class SuperAdminController {
@@ -78,7 +79,7 @@ export class SuperAdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async banUser(
     @Body() banUserDTO: BanUserDto,
-    @Param('id', UserIdPipe) userID: string,
+    @Param('id', ValidIdPipe) userID: string,
   ) {
     await this.commandBus.execute(new BanUserCommand(banUserDTO, userID));
   }
@@ -102,7 +103,7 @@ export class SuperAdminController {
   @UseGuards(BasicAuthGuard)
   @Delete('users/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteUser(@Param('id') userID: string) {
+  async deleteUser(@Param('id', ValidIdPipe) userID: string) {
     await this.commandBus.execute(new DeleteUserCommand(userID));
   }
 }

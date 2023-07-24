@@ -9,6 +9,8 @@ import {
   GetUserAdminType,
   QueryBlogType,
   QueryUsersAdminType,
+  TablesNames,
+  UsersTableType,
 } from '../../../core/models';
 import {
   BlogModel,
@@ -16,6 +18,8 @@ import {
   UserModel,
   UserModelType,
 } from '../../../core/entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class SuperAdminQueryRepository {
@@ -24,6 +28,8 @@ export class SuperAdminQueryRepository {
     private readonly BlogModel: Model<BlogModelType>,
     @InjectModel(UserModel.name)
     private readonly UserModel: Model<UserModelType>,
+    @InjectDataSource()
+    protected dataSource: DataSource,
   ) {}
 
   sortObject(sortDir: string) {
@@ -81,49 +87,42 @@ export class SuperAdminQueryRepository {
   async getAllUsersAdmin(
     queryAll: QueryUsersAdminType,
   ): Promise<GetAllUsersAdminType> {
-    let bannedParams = {};
+    let rawAllUsers: UsersTableType[] = [];
 
-    switch (queryAll.banStatus) {
-      case 'banned':
-        bannedParams = { 'banInfo.isBanned': true };
-        break;
-      case 'notBanned':
-        bannedParams = { 'banInfo.isBanned': false };
-        break;
-    }
+    const text = `SELECT * FROM "${TablesNames.Users}"
+              WHERE ("login" ILIKE $1 OR "email" ILIKE $2)
+              AND ("userIsBanned" = $3 OR ($3 = 'all' AND TRUE))
+              ORDER BY $4 $5
+              LIMIT $6 OFFSET $7`;
+    const values = [
+      queryAll.searchLoginTerm,
+      queryAll.searchEmailTerm,
+      queryAll.banStatus === 'banned' || queryAll.banStatus === 'notBanned'
+        ? queryAll.banStatus === 'banned'
+        : 'all',
+      queryAll.sortBy,
+      queryAll.sortDirection,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-    const allUsers: UserModelType[] = await this.UserModel.find({
-      ...bannedParams,
-      $or: [
-        { login: new RegExp(queryAll.searchLoginTerm, 'gi') },
-        { email: new RegExp(queryAll.searchEmailTerm, 'gi') },
-      ],
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({ [queryAll.sortBy]: this.sortObject(queryAll.sortDirection) });
+    rawAllUsers = await this.dataSource.query(text, values);
 
-    const allMapsUsers: GetUserAdminType[] = allUsers.map((field) => {
+    const mappedAllUsers: GetUserAdminType[] = rawAllUsers.map((field) => {
       return {
-        id: field.id,
+        id: field.userId,
         login: field.login,
         email: field.email,
         createdAt: field.createdAt,
         banInfo: {
-          isBanned: field.banInfo.isBanned,
-          banDate: field.banInfo.banDate,
-          banReason: field.banInfo.banReason,
+          isBanned: field.userIsBanned,
+          banDate: field.banDate,
+          banReason: field.banReason,
         },
       };
     });
 
-    const allCount: number = await this.UserModel.countDocuments({
-      ...bannedParams,
-      $or: [
-        { login: new RegExp(queryAll.searchLoginTerm, 'gi') },
-        { email: new RegExp(queryAll.searchEmailTerm, 'gi') },
-      ],
-    });
+    const allCount: number = mappedAllUsers.length;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
@@ -132,7 +131,7 @@ export class SuperAdminQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsUsers,
+      items: mappedAllUsers,
     };
   }
 }
