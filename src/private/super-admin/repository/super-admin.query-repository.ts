@@ -78,25 +78,6 @@ export class SuperAdminQueryRepository {
     };
   }
 
-  async findUserById(userID: string): Promise<GetUserAdminType> {
-    const findUserSmart = await this.UserModel.findById(userID);
-
-    if (!findUserSmart) {
-      throw new NotFoundException('user not found');
-    }
-
-    return {
-      id: findUserSmart.id,
-      login: findUserSmart.login,
-      email: findUserSmart.email,
-      createdAt: findUserSmart.createdAt,
-      banInfo: {
-        isBanned: findUserSmart.banInfo.isBanned,
-        banDate: findUserSmart.banInfo.banDate,
-        banReason: findUserSmart.banInfo.banReason,
-      },
-    };
-  }
   async getAllUsersAdmin(
     queryAll: QueryUsersAdminType,
   ): Promise<GetAllUsersAdminType> {

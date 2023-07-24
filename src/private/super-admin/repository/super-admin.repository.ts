@@ -15,6 +15,7 @@ import {
   NewUserDTOType,
   UpdateArrayCommentsType,
   UpdateArrayPostsType,
+  UsersTableType,
 } from '../../../core/models';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
@@ -34,10 +35,11 @@ export class SuperAdminRepository {
     private readonly UserModel: Model<UserModelType>,
   ) {}
 
-  async createUser(newUserDTO: NewUserDTOType) {
-    await this.dataSource.query(
-      'INSERT INTO "Users" ("login","hushPass", "email") VALUES ()',
-    );
+  async createUser(newUserDTO: NewUserDTOType): Promise<UsersTableType[]> {
+    const text = `INSERT INTO "Users"(login, "hushPass", email) VALUES($1, $2, $3) RETURNING *`;
+    const values = [newUserDTO.login, newUserDTO.hushPass, newUserDTO.email];
+
+    return await this.dataSource.query(text, values);
   }
   async banedActivityUser(isBanned: boolean, userID: string) {
     await this.CommentModel.updateMany(
@@ -143,6 +145,24 @@ export class SuperAdminRepository {
   }
 
   async deleteAllCollections() {
+    /*    const tablesArray = [
+      'Users',
+      'Blogs',
+      'Posts',
+      'Comments',
+      'SessionsUsersInfo',
+      'BanAllUsersOfBlogInfo',
+      'ExtendedLikesInfo',
+    ];
+
+    await tablesArray.forEach((nameTable) => {
+      const text = `DELETE FROM "Blogs"`;
+      this.dataSource.query(text);
+    });*/
+
+    const text = `DELETE FROM "Blogs"`;
+    await this.dataSource.query(text);
+
     await this.BlogModel.deleteMany();
     await this.PostModel.deleteMany();
     await this.CommentModel.deleteMany();

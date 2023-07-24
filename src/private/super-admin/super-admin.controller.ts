@@ -96,11 +96,7 @@ export class SuperAdminController {
   @Post('users')
   @HttpCode(HttpStatus.CREATED)
   async createUser(@Body() userDTO: CreateUserDto): Promise<GetUserAdminType> {
-    const newUserID: string = await this.commandBus.execute(
-      new CreateUserCommand(userDTO),
-    );
-
-    return await this.superAdminQueryRepository.findUserById(newUserID);
+    return await this.commandBus.execute(new CreateUserCommand(userDTO));
   }
 
   @UseGuards(BasicAuthGuard)
