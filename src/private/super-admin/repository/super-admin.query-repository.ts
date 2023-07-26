@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -35,7 +35,7 @@ export class SuperAdminQueryRepository {
   sortObject(sortDir: string) {
     return sortDir === 'desc' ? -1 : 1;
   }
-  async skippedObject(pageNum: number, pageSize: number) {
+  skippedObject(pageNum: number, pageSize: number) {
     return (pageNum - 1) * pageSize;
   }
 
@@ -45,7 +45,7 @@ export class SuperAdminQueryRepository {
     const allBlogs: BlogModelType[] = await this.BlogModel.find({
       name: new RegExp(queryAll.searchNameTerm, 'gi'),
     })
-      .skip(await this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
+      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
       .limit(queryAll.pageSize)
       .sort({
         [queryAll.sortBy]: this.sortObject(queryAll.sortDirection),
@@ -98,23 +98,33 @@ export class SuperAdminQueryRepository {
   async getAllUsersAdmin(
     queryAll: QueryUsersAdminType,
   ): Promise<GetAllUsersAdminType> {
-    let rawAllUsers: UsersTableType[] = [];
-
     const banStatusFilter = await this.userBannedChecked(queryAll.banStatus);
 
-    const offsetVariable = await this.skippedObject(
-      queryAll.pageNumber,
-      queryAll.pageSize,
-    );
-
-    const text = `SELECT * FROM "${TablesNames.Users}"
+    const text1 = `SELECT * FROM "${TablesNames.Users}"
           WHERE ${banStatusFilter}
           ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
           OR "email" ILIKE '%${queryAll.searchEmailTerm}%')
           ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
-          LIMIT ${queryAll.pageSize} OFFSET ${offsetVariable}`;
+          LIMIT $1 OFFSET $2`;
 
-    rawAllUsers = await this.dataSource.query(text);
+    const text2 = `SELECT * FROM "${TablesNames.Users}"
+          WHERE ${banStatusFilter}
+          ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
+          OR "email" ILIKE '%${queryAll.searchEmailTerm}%')`;
+
+    const values = [
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
+
+    const rawAllUsers: UsersTableType[] = await this.dataSource.query(
+      text1,
+      values,
+    );
+
+    const rawAllUsersCount: UsersTableType[] = await this.dataSource.query(
+      text2,
+    );
 
     const mappedAllUsers: GetUserAdminType[] = rawAllUsers.map((field) => {
       return {
@@ -130,7 +140,7 @@ export class SuperAdminQueryRepository {
       };
     });
 
-    const allCount: number = mappedAllUsers.length;
+    const allCount: number = rawAllUsersCount.length;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
