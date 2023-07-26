@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -35,7 +35,7 @@ export class SuperAdminQueryRepository {
   sortObject(sortDir: string) {
     return sortDir === 'desc' ? -1 : 1;
   }
-  skippedObject(pageNum: number, pageSize: number) {
+  async skippedObject(pageNum: number, pageSize: number) {
     return (pageNum - 1) * pageSize;
   }
 
@@ -45,7 +45,7 @@ export class SuperAdminQueryRepository {
     const allBlogs: BlogModelType[] = await this.BlogModel.find({
       name: new RegExp(queryAll.searchNameTerm, 'gi'),
     })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
+      .skip(await this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
       .limit(queryAll.pageSize)
       .sort({
         [queryAll.sortBy]: this.sortObject(queryAll.sortDirection),
@@ -102,19 +102,19 @@ export class SuperAdminQueryRepository {
 
     const banStatusFilter = await this.userBannedChecked(queryAll.banStatus);
 
+    const offsetVariable = await this.skippedObject(
+      queryAll.pageNumber,
+      queryAll.pageSize,
+    );
+
     const text = `SELECT * FROM "${TablesNames.Users}"
           WHERE ${banStatusFilter}
           ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
           OR "email" ILIKE '%${queryAll.searchEmailTerm}%')
           ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
-          LIMIT $1 OFFSET $2`;
+          LIMIT ${queryAll.pageSize} OFFSET ${offsetVariable}`;
 
-    const values = [
-      queryAll.pageSize,
-      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
-    ];
-
-    rawAllUsers = await this.dataSource.query(text, values);
+    rawAllUsers = await this.dataSource.query(text);
 
     const mappedAllUsers: GetUserAdminType[] = rawAllUsers.map((field) => {
       return {

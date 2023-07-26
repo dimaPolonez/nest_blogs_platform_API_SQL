@@ -25,7 +25,7 @@ export type UsersTableType = {
 };
 
 export type BlogsTableType = {
-  blogId: string;
+  id: string;
   name: string;
   description: string;
   websiteUrl: string;
