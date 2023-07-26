@@ -84,24 +84,33 @@ export class SuperAdminQueryRepository {
     };
   }
 
+  async userBannedChecked(banStatus: string) {
+    switch (banStatus) {
+      case 'banned':
+        return `"userIsBanned"=true AND`;
+      case 'notBanned':
+        return `"userIsBanned"=false AND`;
+      case 'all':
+        return ``;
+    }
+  }
+
   async getAllUsersAdmin(
     queryAll: QueryUsersAdminType,
   ): Promise<GetAllUsersAdminType> {
     let rawAllUsers: UsersTableType[] = [];
 
+    const banStatusFilter = await this.userBannedChecked(queryAll.banStatus);
+
     const text = `SELECT * FROM "${TablesNames.Users}"
-              WHERE ("login" ILIKE $1 OR "email" ILIKE $2)
-              AND ("userIsBanned" = $3 OR ($3 = 'all' AND TRUE))
-              ORDER BY $4 $5
-              LIMIT $6 OFFSET $7`;
+          WHERE ${banStatusFilter}
+          ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
+          OR "email" ILIKE '%${queryAll.searchEmailTerm}%')
+          ORDER BY $1 ${queryAll.sortDirection}
+          LIMIT $2 OFFSET $3`;
+
     const values = [
-      queryAll.searchLoginTerm,
-      queryAll.searchEmailTerm,
-      queryAll.banStatus === 'banned' || queryAll.banStatus === 'notBanned'
-        ? queryAll.banStatus === 'banned'
-        : 'all',
       queryAll.sortBy,
-      queryAll.sortDirection,
       queryAll.pageSize,
       this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
     ];

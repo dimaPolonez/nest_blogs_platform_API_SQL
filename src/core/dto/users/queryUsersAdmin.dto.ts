@@ -8,7 +8,7 @@ export class QueryUsersAdminDto implements QueryUsersAdminType {
   readonly searchLoginTerm = '';
   readonly searchEmailTerm = '';
   readonly sortBy = 'createdAt';
-  readonly sortDirection = 'desc';
+  readonly sortDirection = 'DESC';
   @Min(1)
   @Type(() => Number)
   readonly pageNumber = 1;
