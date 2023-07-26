@@ -106,11 +106,10 @@ export class SuperAdminQueryRepository {
           WHERE ${banStatusFilter}
           ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
           OR "email" ILIKE '%${queryAll.searchEmailTerm}%')
-          ORDER BY $1 ${queryAll.sortDirection}
-          LIMIT $2 OFFSET $3`;
+          ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+          LIMIT $1 OFFSET $2`;
 
     const values = [
-      queryAll.sortBy,
       queryAll.pageSize,
       this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
     ];

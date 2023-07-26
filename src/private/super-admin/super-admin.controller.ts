@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   Query,
@@ -29,14 +30,11 @@ import {
   CreateUserCommand,
   DeleteUserCommand,
 } from './application/use-cases';
-import { BlogIdPipe } from '../../validation/pipes/blogId.pipe';
-import { UserIdPipe } from '../../validation/pipes/userId.pipe';
 import {
   BanUserDto,
   CreateUserDto,
   QueryUsersAdminDto,
 } from '../../core/dto/users';
-import { ValidUserIdPipe } from '../../validation/pipes/validUserId.pipe';
 
 @Controller('sa')
 export class SuperAdminController {
@@ -50,7 +48,7 @@ export class SuperAdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async banBlog(
     @Body() banBlogDTO: BanBlogDto,
-    @Param('id', BlogIdPipe) blogID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
   ) {
     await this.commandBus.execute(new BanBlogCommand(banBlogDTO, blogID));
   }
@@ -59,8 +57,8 @@ export class SuperAdminController {
   @Put('blogs/:id/bind-with-user/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async bindBlog(
-    @Param('id', BlogIdPipe) blogID: string,
-    @Param('userId', UserIdPipe) userID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
+    @Param('userId', new ParseUUIDPipe()) userID: string,
   ) {
     await this.commandBus.execute(new BindBlogCommand(blogID, userID));
   }
@@ -79,7 +77,7 @@ export class SuperAdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async banUser(
     @Body() banUserDTO: BanUserDto,
-    @Param('id', ValidUserIdPipe) userID: string,
+    @Param('id', new ParseUUIDPipe()) userID: string,
   ) {
     await this.commandBus.execute(new BanUserCommand(banUserDTO, userID));
   }
@@ -103,7 +101,7 @@ export class SuperAdminController {
   @UseGuards(BasicAuthGuard)
   @Delete('users/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteUser(@Param('id', ValidUserIdPipe) userID: string) {
+  async deleteUser(@Param('id', new ParseUUIDPipe()) userID: string) {
     await this.commandBus.execute(new DeleteUserCommand(userID));
   }
 }
