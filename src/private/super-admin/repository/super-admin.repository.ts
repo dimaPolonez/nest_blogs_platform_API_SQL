@@ -51,11 +51,11 @@ export class SuperAdminRepository {
     return await this.dataSource.query(text, values);
   }
   async banedUser(banUserDTO: BanUserType, userID: string): Promise<number> {
-    let text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, "banDate" = NOW(), "banReason" = $2 WHERE "userId" = $3`;
+    let text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, "banDate" = NOW(), "banReason" = $2 WHERE "id" = $3`;
     let values = [banUserDTO.isBanned, banUserDTO.banReason, userID];
 
     if (banUserDTO.isBanned === false) {
-      text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = false, "banDate" = null, "banReason" = null WHERE "userId" = $1`;
+      text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = false, "banDate" = null, "banReason" = null WHERE "id" = $1`;
       values = [userID];
     }
 
@@ -147,7 +147,7 @@ export class SuperAdminRepository {
   }
 
   async findUserByIdSql(userID: string): Promise<UsersTableType[]> {
-    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "userId" = $1`;
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
     const values = [userID];
 
     return await this.dataSource.query(text, values);
