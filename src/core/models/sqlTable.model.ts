@@ -11,7 +11,7 @@ export enum TablesNames {
 }
 
 export type UsersTableType = {
-  userId: string;
+  id: string;
   login: string;
   hushPass: string;
   email: string;

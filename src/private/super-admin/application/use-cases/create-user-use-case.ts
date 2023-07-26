@@ -37,7 +37,7 @@ export class CreateUserUseCase implements ICommandHandler<CreateUserCommand> {
 
     const mappedUser: GetUserAdminType[] = rawUser.map((v) => {
       return {
-        id: v.userId,
+        id: v.id,
         login: v.login,
         email: v.email,
         createdAt: v.createdAt,

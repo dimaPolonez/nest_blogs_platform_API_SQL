@@ -126,7 +126,7 @@ export class SuperAdminQueryRepository {
         },
         createdAt: field.createdAt,
         email: field.email,
-        id: field.userId.toString(),
+        id: field.id,
         login: field.login,
       };
     });

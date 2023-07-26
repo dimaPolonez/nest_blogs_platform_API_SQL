@@ -37,6 +37,13 @@ export class SuperAdminRepository {
     private readonly UserModel: Model<UserModelType>,
   ) {}
 
+  async checkedUser(userID: string): Promise<UsersTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
+    const values = [userID];
+
+    return await this.dataSource.query(text, values);
+  }
+
   async createUser(newUserDTO: NewUserDTOType): Promise<UsersTableType[]> {
     const text = `INSERT INTO "${TablesNames.Users}"(login, "hushPass", email) VALUES($1, $2, $3) RETURNING *`;
     const values = [newUserDTO.login, newUserDTO.hushPass, newUserDTO.email];
