@@ -154,7 +154,7 @@ export class SuperAdminRepository {
   }
 
   async deleteUser(userID: string): Promise<number> {
-    const text = `DELETE FROM "${TablesNames.Users}" WHERE "userId" = $1`;
+    const text = `DELETE FROM "${TablesNames.Users}" WHERE "id" = $1`;
     const values = [userID];
 
     const result = await this.dataSource.query(text, values);

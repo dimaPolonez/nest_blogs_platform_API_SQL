@@ -119,15 +119,15 @@ export class SuperAdminQueryRepository {
 
     const mappedAllUsers: GetUserAdminType[] = rawAllUsers.map((field) => {
       return {
-        banInfo: {
-          banDate: field.banDate,
-          banReason: field.banReason,
-          isBanned: field.userIsBanned,
-        },
-        createdAt: field.createdAt,
-        email: field.email,
         id: field.id,
         login: field.login,
+        email: field.email,
+        createdAt: field.createdAt,
+        banInfo: {
+          isBanned: field.userIsBanned,
+          banDate: field.banDate,
+          banReason: field.banReason,
+        },
       };
     });
 
