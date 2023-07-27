@@ -1,5 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { LoginType } from '../../core/models';
+import {
+  LoginType,
+  SessionsUsersInfoType,
+  UsersTableType,
+} from '../../core/models';
 import { BcryptAdapter } from '../../adapters';
 import { BlogModelType, UserModel, UserModelType } from '../../core/entity';
 import { AuthRepository } from '../repository/auth.repository';
@@ -101,57 +105,47 @@ export class AuthService {
   }
 
   async findUserLogin(userID: string): Promise<string> {
-    const findUser: UserModelType | null =
-      await this.authRepository.findUserById(userID);
-
-    if (!findUser || findUser.sessionsUser.length === 0) {
-      throw new UnauthorizedException();
+    const rowUser: UsersTableType[] = await this.authRepository.findUser(
+      userID,
+    );
+    if (rowUser.length < 1) {
+      throw new UnauthorizedException('Token is not valid');
     }
-
-    return findUser.login;
+    return rowUser[0].login;
   }
   async validateUser(loginDTO: LoginType): Promise<null | string> {
-    const findUser: UserModelType | null =
-      await this.authRepository.findUserByEmailOrLogin(loginDTO.loginOrEmail);
+    const rowUser: UsersTableType[] =
+      await this.authRepository.findUserEmailOrLogin(loginDTO.loginOrEmail);
 
-    if (!findUser || findUser.banInfo.isBanned === true) {
+    if (rowUser.length < 1 || rowUser[0].userIsBanned === true) {
       return null;
     }
 
     const validPassword: boolean = await this.bcryptAdapter.hushCompare(
       loginDTO.password,
-      findUser.hushPass,
+      rowUser[0].hushPass,
     );
 
     if (!validPassword) {
       return null;
     }
 
-    return findUser.id;
+    return rowUser[0].id;
   }
 
   async checkedActiveSession(
-    userID: string,
     deviceID: string,
     lastDateToken: number,
   ): Promise<boolean> {
-    const findUser: UserModelType | null =
-      await this.authRepository.findUserById(userID);
+    const rawSession: SessionsUsersInfoType[] =
+      await this.authRepository.findSession(deviceID);
 
-    if (!findUser) {
-      return false;
-    }
-
-    const findSession = findUser.sessionsUser.find(
-      (value) => value.deviceId === deviceID,
-    );
-
-    if (!findSession) {
+    if (rawSession.length < 1) {
       return false;
     }
 
     const lastActiveToSecond = Number(
-      Date.parse(findSession.lastActiveDate).toString().slice(0, 10),
+      Date.parse(rawSession[0].lastActiveDate).toString().slice(0, 10),
     );
 
     if (lastActiveToSecond > lastDateToken) {

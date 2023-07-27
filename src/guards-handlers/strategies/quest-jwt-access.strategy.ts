@@ -24,7 +24,6 @@ export class QuestJwtAccessStrategy extends PassportStrategy(
       return { userID: payload.userID };
     }
 
-    JwtService;
     const userName: string = await this.authService.findUserLogin(
       payload.userID,
     );

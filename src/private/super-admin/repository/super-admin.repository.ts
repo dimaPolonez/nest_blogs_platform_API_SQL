@@ -45,17 +45,20 @@ export class SuperAdminRepository {
   }
 
   async createUser(newUserDTO: NewUserDTOType): Promise<UsersTableType[]> {
-    const text = `INSERT INTO "${TablesNames.Users}"(login, "hushPass", email) VALUES($1, $2, $3) RETURNING *`;
+    const text = `INSERT INTO "${TablesNames.Users}"(login, "hushPass", email) 
+                  VALUES($1, $2, $3) RETURNING *`;
     const values = [newUserDTO.login, newUserDTO.hushPass, newUserDTO.email];
 
     return await this.dataSource.query(text, values);
   }
   async banedUser(banUserDTO: BanUserType, userID: string): Promise<number> {
-    let text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, "banDate" = NOW(), "banReason" = $2 WHERE "id" = $3`;
+    let text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, 
+                "banDate" = NOW(), "banReason" = $2 WHERE "id" = $3`;
     let values = [banUserDTO.isBanned, banUserDTO.banReason, userID];
 
     if (banUserDTO.isBanned === false) {
-      text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = false, "banDate" = null, "banReason" = null WHERE "id" = $1`;
+      text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = false, 
+              "banDate" = null, "banReason" = null WHERE "id" = $1`;
       values = [userID];
     }
 
@@ -174,7 +177,8 @@ export class SuperAdminRepository {
       TablesNames.Comments,
       TablesNames.SessionsUsersInfo,
       TablesNames.BanAllUsersOfBlogInfo,
-      TablesNames.ExtendedLikesInfo,
+      TablesNames.ExtendedLikesPostInfo,
+      TablesNames.ExtendedLikesCommentInfo,
     ];
 
     await tablesArray.forEach((nameTable) => {

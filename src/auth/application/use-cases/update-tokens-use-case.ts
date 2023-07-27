@@ -4,6 +4,7 @@ import { AuthObjectUpdateType, TokensObjectType } from '../../../core/models';
 import { add } from 'date-fns';
 import { CONFIG } from '../../../config/config';
 import { JwtService } from '@nestjs/jwt';
+import { NotFoundException } from '@nestjs/common';
 
 export class UpdateTokensCommand {
   constructor(public readonly authObject: AuthObjectUpdateType) {}
@@ -20,17 +21,18 @@ export class UpdateTokensUseCase
   async execute(command: UpdateTokensCommand): Promise<TokensObjectType> {
     const { authObject } = command;
 
-    const lastActiveDate: string = new Date().toISOString();
-
     const expiresTime: string = add(new Date(), {
       seconds: CONFIG.EXPIRES_REFRESH,
     }).toString();
 
-    await this.authRepository.updateDevice({
-      deviceID: authObject.deviceID,
-      expiresTime: expiresTime,
-      lastActiveDate: lastActiveDate,
-    });
+    const resultUpdate: number = await this.authRepository.updateDevice(
+      authObject.deviceID,
+      expiresTime,
+    );
+
+    if (!resultUpdate) {
+      throw new NotFoundException();
+    }
 
     const refreshToken: string = this.jwtService.sign(
       { deviceId: authObject.deviceID, userID: authObject.userID },

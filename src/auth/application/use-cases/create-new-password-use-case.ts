@@ -1,8 +1,8 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { BcryptAdapter } from '../../../adapters';
 import { AuthRepository } from '../../repository/auth.repository';
-import { UserModelType } from '../../../core/entity';
-import { ConfirmUserType, NewPassType } from '../../../core/models';
+import { NewPassType } from '../../../core/models';
+import { NotFoundException } from '@nestjs/common';
 
 export class CreateNewPasswordCommand {
   constructor(public readonly newPassDTO: NewPassType) {}
@@ -20,21 +20,18 @@ export class CreateNewPasswordUseCase
   async execute(command: CreateNewPasswordCommand) {
     const { newPassDTO } = command;
 
-    const findUserByCode: UserModelType =
-      await this.authRepository.findUserByCode(newPassDTO.recoveryCode);
-
-    const newUserDTO: ConfirmUserType = {
-      codeActivated: 'Activated',
-      lifeTimeCode: 'Activated',
-      confirm: true,
-    };
-
     const newPass: string = await this.bcryptAdapter.hushGenerate(
       newPassDTO.newPassword,
     );
 
-    await findUserByCode.updateActivateUserAndPassword(newUserDTO, newPass);
+    const resultUpdate: number =
+      await this.authRepository.updateActivateUserAndPassword(
+        newPassDTO.recoveryCode,
+        newPass,
+      );
 
-    await this.authRepository.save(findUserByCode);
+    if (!resultUpdate) {
+      throw new NotFoundException();
+    }
   }
 }

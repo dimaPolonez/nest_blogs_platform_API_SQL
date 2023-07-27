@@ -5,10 +5,11 @@ import {
   MailerAdapter,
 } from '../../../adapters';
 import { AuthRepository } from '../../repository/auth.repository';
-import { UserModel, UserModelType } from '../../../core/entity';
-import { CreateUserMailType } from '../../../core/models';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import {
+  CreateUserMailType,
+  UserRegistrationDTO,
+  UsersTableType,
+} from '../../../core/models';
 
 export class RegistrationUserCommand {
   constructor(public readonly userRegDTO: CreateUserMailType) {}
@@ -23,8 +24,6 @@ export class RegistrationUserUseCase
     protected activeCodeAdapter: ActiveCodeAdapter,
     protected mailerAdapter: MailerAdapter,
     protected bcryptAdapter: BcryptAdapter,
-    @InjectModel(UserModel.name)
-    private readonly UserModel: Model<UserModelType>,
   ) {}
 
   async execute(command: RegistrationUserCommand) {
@@ -36,24 +35,21 @@ export class RegistrationUserUseCase
 
     const authParams = await this.activeCodeAdapter.createCode();
 
-    const newUserDTO = {
+    const newUserDTO: UserRegistrationDTO = {
       login: userRegDTO.login,
       hushPass: hushPass,
       email: userRegDTO.email,
-      activateUser: {
-        codeActivated: authParams.codeActivated,
-        lifeTimeCode: authParams.lifeTimeCode,
-        confirm: authParams.confirm,
-      },
+      codeActivated: authParams.codeActivated,
+      lifeTimeCode: authParams.lifeTimeCode,
+      confirm: authParams.confirm,
     };
 
-    const createUserSmart: UserModelType = await new this.UserModel(newUserDTO);
-
-    await this.authRepository.save(createUserSmart);
+    const rawUser: UsersTableType[] =
+      await this.authRepository.userRegistration(newUserDTO);
 
     await this.mailerAdapter.sendMailCode(
-      userRegDTO.email,
-      authParams.codeActivated,
+      rawUser[0].email,
+      rawUser[0].codeActivated,
     );
   }
 }

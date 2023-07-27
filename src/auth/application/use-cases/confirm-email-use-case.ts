@@ -1,7 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { AuthRepository } from '../../repository/auth.repository';
-import { UserModelType } from '../../../core/entity';
-import { ConfirmUserType } from '../../../core/models';
+import { NotFoundException } from '@nestjs/common';
 
 export class ConfirmEmailCommand {
   constructor(public readonly code: string) {}
@@ -16,17 +15,12 @@ export class ConfirmEmailUseCase
   async execute(command: ConfirmEmailCommand) {
     const { code } = command;
 
-    const findUserByCode: UserModelType =
-      await this.authRepository.findUserByCode(code);
+    const resultUpdate: number = await this.authRepository.updateActivateUser(
+      code,
+    );
 
-    const newUserDTO: ConfirmUserType = {
-      codeActivated: 'Activated',
-      lifeTimeCode: 'Activated',
-      confirm: true,
-    };
-
-    await findUserByCode.updateActivateUser(newUserDTO);
-
-    await this.authRepository.save(findUserByCode);
+    if (!resultUpdate) {
+      throw new NotFoundException();
+    }
   }
 }

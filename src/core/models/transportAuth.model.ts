@@ -28,6 +28,15 @@ export type AuthObjectUpdateType = {
   deviceID: string;
 };
 
+export type UserRegistrationDTO = {
+  login: string;
+  hushPass: string;
+  email: string;
+  codeActivated: string;
+  lifeTimeCode: string;
+  confirm: boolean;
+};
+
 export type TokensObjectType = {
   refreshToken: string;
   accessDTO: {

@@ -1,7 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { AuthRepository } from '../../repository/auth.repository';
-import { UserModelType } from '../../../core/entity';
-import { SessionUserType } from '../../../core/models';
+import { SessionsUsersInfoType } from '../../../core/models';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 export class DeleteActiveSessionCommand {
@@ -20,29 +19,24 @@ export class DeleteActiveSessionUseCase
   async execute(command: DeleteActiveSessionCommand) {
     const { userID, deviceID } = command;
 
-    const findUser: UserModelType = await this.authRepository.findUserById(
-      userID,
-    );
+    const rowSession: SessionsUsersInfoType[] =
+      await this.authRepository.findSession(deviceID);
 
-    const foundSession: SessionUserType | null =
-      await this.authRepository.findUserSession(deviceID);
-
-    if (!foundSession) {
+    if (rowSession.length < 1) {
       throw new NotFoundException();
     }
 
-    const sessionByUser = findUser.sessionsUser.find(
-      (value) => value.deviceId === deviceID,
-    );
-
-    if (!sessionByUser) {
+    if (rowSession[0].userId !== userID) {
       throw new ForbiddenException();
     }
 
-    findUser.sessionsUser = findUser.sessionsUser.filter(
-      (value) => value.deviceId !== deviceID,
+    const resultDelete: number = await this.authRepository.logoutUser(
+      userID,
+      deviceID,
     );
 
-    await this.authRepository.save(findUser);
+    if (!resultDelete) {
+      throw new NotFoundException();
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { EntityLikes, MyLikeStatus } from './getPost.model';
+import { MyLikeStatus } from './getPost.model';
 
 export enum TablesNames {
   Users = 'Users',
@@ -7,7 +7,8 @@ export enum TablesNames {
   Comments = 'Comments',
   SessionsUsersInfo = 'SessionsUsersInfo',
   BanAllUsersOfBlogInfo = 'BanAllUsersOfBlogInfo',
-  ExtendedLikesInfo = 'ExtendedLikesInfo',
+  ExtendedLikesPostInfo = 'ExtendedLikesPostInfo',
+  ExtendedLikesCommentInfo = 'ExtendedLikesCommentInfo',
 }
 
 export type UsersTableType = {
@@ -37,7 +38,7 @@ export type BlogsTableType = {
 };
 
 export type PostsTableType = {
-  postId: string;
+  id: string;
   blogId: string;
   title: string;
   shortDescription: string;
@@ -46,7 +47,7 @@ export type PostsTableType = {
 };
 
 export type CommentsTableType = {
-  commentId: string;
+  id: string;
   userOwnerId: string;
   postId: string;
   content: string;
@@ -54,7 +55,7 @@ export type CommentsTableType = {
 };
 
 export type SessionsUsersInfoType = {
-  sessionId: string;
+  id: string;
   userId: string;
   ip: string;
   title: string;
@@ -63,18 +64,25 @@ export type SessionsUsersInfoType = {
 };
 
 export type BanAllUsersOfBlogInfoType = {
-  banId: string;
+  id: string;
   blogId: string;
   userId: string;
   banDate: string;
   banReason: string;
 };
 
-export type ExtendedLikesInfoType = {
-  likeId: string;
+export type ExtendedLikesPostInfoType = {
+  id: string;
   userOwnerId: string;
-  entity: EntityLikes;
-  entityId: string;
+  postId: string;
+  status: MyLikeStatus;
+  addedAt: string;
+};
+
+export type ExtendedLikesCommentInfoType = {
+  id: string;
+  userOwnerId: string;
+  commentId: string;
   status: MyLikeStatus;
   addedAt: string;
 };
