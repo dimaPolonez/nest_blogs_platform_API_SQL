@@ -154,7 +154,7 @@ export class AuthRepository {
   }
 
   async logoutUser(deviceID: string) {
-    const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "id" = $2`;
+    const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "id" = $1`;
 
     const values = [deviceID];
 
