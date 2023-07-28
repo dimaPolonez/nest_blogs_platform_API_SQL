@@ -42,12 +42,13 @@ import {
   RegistrationUserCommand,
   UpdateTokensCommand,
 } from './application/use-cases';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
   constructor(protected commandBus: CommandBus) {}
 
-  //@UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('password-recovery')
   async userCreateNewPass(@Body() userEmailDTO: EmailRecPassDto) {
@@ -56,14 +57,14 @@ export class AuthController {
     );
   }
 
-  //@UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('new-password')
   async userUpdateNewPass(@Body() newPassDTO: NewPassDto) {
     await this.commandBus.execute(new CreateNewPasswordCommand(newPassDTO));
   }
 
-  @UseGuards(/*ThrottlerGuard,*/ LocalAuthGuard)
+  @UseGuards(ThrottlerGuard, LocalAuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async userAuthorization(
@@ -120,21 +121,21 @@ export class AuthController {
     return tokensObject.accessDTO;
   }
 
-  //@UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('registration-confirmation')
   async userRegistrationConfirm(@Body() codeConfirm: CodeConfirmDto) {
     await this.commandBus.execute(new ConfirmEmailCommand(codeConfirm.code));
   }
 
-  //@UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('registration')
   async userRegistration(@Body() userRegDTO: CreateUserMailDto) {
     await this.commandBus.execute(new RegistrationUserCommand(userRegDTO));
   }
 
-  //@UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('registration-email-resending')
   async userRegistrationResending(@Body() userEmailDTO: EmailResendDto) {
