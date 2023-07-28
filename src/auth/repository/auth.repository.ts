@@ -65,7 +65,7 @@ export class AuthRepository {
 
   async updateActivateUser(recoveryCode: string): Promise<number> {
     const text = `UPDATE "${TablesNames.Users}" SET "userIsConfirmed" = true,
-                  "codeActivated" = null, "codeActivatedExpired" = null, 
+                  "codeActivated" = null, "codeActivatedExpired" = null 
                   WHERE "codeActivated" = $1`;
 
     const values = [recoveryCode];
