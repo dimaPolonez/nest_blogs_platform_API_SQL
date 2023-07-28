@@ -28,7 +28,10 @@ export class LogoutUseCase implements ICommandHandler<LogoutCommand> {
       throw new ForbiddenException();
     }
 
-    const resultDelete: number = await this.authRepository.logoutUser(userID);
+    const resultDelete: number = await this.authRepository.logoutUser(
+      userID,
+      deviceID,
+    );
 
     if (!resultDelete) {
       throw new NotFoundException();
