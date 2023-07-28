@@ -189,17 +189,27 @@ export class AuthRepository {
     return this.UserModel.findOne({ 'sessionsUser.deviceId': sessionID });
   }
 
-  async findUserByCode(code: string): Promise<UserModelType | null> {
-    return this.UserModel.findOne({
-      'activateUser.codeActivated': code,
-    });
+  async findUserByCode(code: string): Promise<UsersTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "codeActivated" = $1`;
+
+    const values = [code];
+
+    return await this.dataSource.query(text, values);
   }
-  async checkedEmail(email: string): Promise<UserModelType | null> {
-    return this.UserModel.findOne({ email: email });
+  async checkedEmail(email: string): Promise<UsersTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "email" = $1`;
+
+    const values = [email];
+
+    return await this.dataSource.query(text, values);
   }
 
-  async checkedUniqueLogin(login: string): Promise<UserModelType | null> {
-    return this.UserModel.findOne({ login: login });
+  async checkedUniqueLogin(login: string): Promise<UsersTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "login" = $1`;
+
+    const values = [login];
+
+    return await this.dataSource.query(text, values);
   }
 
   async findUserByEmailOrLogin(

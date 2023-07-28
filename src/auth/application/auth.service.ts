@@ -7,6 +7,7 @@ import {
 import { BcryptAdapter } from '../../adapters';
 import { BlogModelType, UserModel, UserModelType } from '../../core/entity';
 import { AuthRepository } from '../repository/auth.repository';
+import { isAfter } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -41,15 +42,18 @@ export class AuthService {
   }
 
   async checkedConfirmCode(codeConfirm: string): Promise<boolean> {
-    const findUserByCode: UserModelType | null =
-      await this.authRepository.findUserByCode(codeConfirm);
-    if (!findUserByCode) {
+    const rowUser: UsersTableType[] = await this.authRepository.findUserByCode(
+      codeConfirm,
+    );
+
+    if (rowUser.length < 1) {
       return false;
     }
 
-    const codeValid: boolean = await findUserByCode.checkedActivateCodeValid();
+    const dateExpiredCode = Date.parse(rowUser[0].codeActivatedExpired);
+    const dateNow = new Date();
 
-    if (!codeValid) {
+    if (isAfter(dateExpiredCode, dateNow)) {
       return false;
     }
 
@@ -57,10 +61,11 @@ export class AuthService {
   }
 
   async checkedUniqueEmail(email: string): Promise<boolean> {
-    const checkedUniqueEmail: UserModelType | null =
-      await this.authRepository.checkedEmail(email);
+    const rowUser: UsersTableType[] = await this.authRepository.checkedEmail(
+      email,
+    );
 
-    if (checkedUniqueEmail) {
+    if (rowUser.length > 0) {
       return false;
     }
 
@@ -68,14 +73,15 @@ export class AuthService {
   }
 
   async checkedEmailToBase(email: string): Promise<boolean> {
-    const checkedEmailToBase: UserModelType | null =
-      await this.authRepository.checkedEmail(email);
+    const rowUser: UsersTableType[] = await this.authRepository.checkedEmail(
+      email,
+    );
 
-    if (!checkedEmailToBase) {
+    if (rowUser.length < 1) {
       return false;
     }
 
-    if (checkedEmailToBase.activateUser.confirm === true) {
+    if (rowUser[0].userIsConfirmed === true) {
       return false;
     }
 
@@ -83,10 +89,10 @@ export class AuthService {
   }
 
   async checkedUniqueLogin(login: string): Promise<boolean> {
-    const checkedUniqueLogin: UserModelType | null =
+    const rowUser: UsersTableType[] =
       await this.authRepository.checkedUniqueLogin(login);
 
-    if (checkedUniqueLogin) {
+    if (rowUser.length > 0) {
       return false;
     }
 
