@@ -10,10 +10,8 @@ import {
 import {
   AuthObjectType,
   ConfirmUserType,
-  NewPassType,
   SessionsUsersInfoType,
   SessionUserType,
-  SessionUserUpdateDTOType,
   TablesNames,
   UserRegistrationDTO,
   UsersTableType,
@@ -147,9 +145,28 @@ export class AuthRepository {
     return await this.dataSource.query(text, values);
   }
 
+  async findUserSessions(userID: string): Promise<SessionsUsersInfoType[]> {
+    const text = `SELECT * FROM "${TablesNames.SessionsUsersInfo}" WHERE "userId" = $1`;
+
+    const values = [userID];
+
+    return await this.dataSource.query(text, values);
+  }
+
   async logoutUser(userID: string, deviceID: string) {
     const text = `DELETE "${TablesNames.SessionsUsersInfo}" WHERE "userID" = $1 
     AND "deviceID" <> $2;`;
+
+    const values = [userID, deviceID];
+
+    const result = await this.dataSource.query(text, values);
+
+    return result[1];
+  }
+
+  async deleteOneSession(userID: string, deviceID: string) {
+    const text = `DELETE "${TablesNames.SessionsUsersInfo}" WHERE "userID" = $1 
+    AND "deviceID" = $2;`;
 
     const values = [userID, deviceID];
 

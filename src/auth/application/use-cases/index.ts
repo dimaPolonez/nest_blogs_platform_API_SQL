@@ -8,4 +8,4 @@ export * from './email-resending-use-case';
 export * from './delete-active-session-use-case';
 export * from './get-user-inf-use-case';
 export * from './get-all-session-use-case';
-export * from './delete-all-session-use-case';
+export * from './delete-one-session-use-case';

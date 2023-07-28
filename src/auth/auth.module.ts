@@ -25,7 +25,7 @@ import {
   CreateNewPasswordUseCase,
   CreateTokensUseCase,
   DeleteActiveSessionUseCase,
-  DeleteAllSessionUseCase,
+  DeleteOneSessionUseCase,
   EmailResendingUseCase,
   GetAllSessionUseCase,
   GetUserInfUseCase,
@@ -56,7 +56,7 @@ const useCases = [
   DeleteActiveSessionUseCase,
   GetUserInfUseCase,
   GetAllSessionUseCase,
-  DeleteAllSessionUseCase,
+  DeleteOneSessionUseCase,
 ];
 
 @Module({
