@@ -16,16 +16,6 @@ export class AuthService {
     protected bcryptAdapter: BcryptAdapter,
   ) {}
 
-  async checkUser(userID: string): Promise<boolean> {
-    const checkedUser: UserModelType | null =
-      await this.authRepository.findUserById(userID);
-
-    if (!checkedUser) {
-      return false;
-    }
-    return true;
-  }
-
   async userBlockedToBlog(userID: string, blogID: string): Promise<boolean> {
     const blockedUserArray: BlogModelType | null =
       await this.authRepository.userBlockedToBlog(userID, blogID);
@@ -53,7 +43,7 @@ export class AuthService {
     const dateExpiredCode = Date.parse(rowUser[0].codeActivatedExpired);
     const dateNow = new Date();
 
-    if (isAfter(dateExpiredCode, dateNow)) {
+    if (!isAfter(dateExpiredCode, dateNow)) {
       return false;
     }
 

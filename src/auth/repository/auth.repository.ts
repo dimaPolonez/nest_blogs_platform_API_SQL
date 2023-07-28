@@ -185,10 +185,6 @@ export class AuthRepository {
     return this.UserModel.findById({ _id: userID });
   }
 
-  async findUserSession(sessionID: string): Promise<SessionUserType | null> {
-    return this.UserModel.findOne({ 'sessionsUser.deviceId': sessionID });
-  }
-
   async findUserByCode(code: string): Promise<UsersTableType[]> {
     const text = `SELECT * FROM "${TablesNames.Users}" WHERE "codeActivated" = $1`;
 
@@ -210,23 +206,6 @@ export class AuthRepository {
     const values = [login];
 
     return await this.dataSource.query(text, values);
-  }
-
-  async findUserByEmailOrLogin(
-    loginOrEmail: string,
-  ): Promise<UserModelType | null> {
-    return this.UserModel.findOne({
-      $or: [
-        {
-          login: loginOrEmail,
-        },
-        { email: loginOrEmail },
-      ],
-    });
-  }
-
-  async findUserEmailToBase(email: string): Promise<UserModelType | null> {
-    return this.UserModel.findOne({ email: email });
   }
 
   async save(model: UserModelType) {
