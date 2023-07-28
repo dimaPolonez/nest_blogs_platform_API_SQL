@@ -153,10 +153,10 @@ export class AuthRepository {
     return await this.dataSource.query(text, values);
   }
 
-  async logoutUser(userID: string, deviceID: string) {
-    const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "userId" = $1 AND "id" <> $2`;
+  async logoutUser(deviceID: string) {
+    const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "id" = $2`;
 
-    const values = [userID, deviceID];
+    const values = [deviceID];
 
     const result = await this.dataSource.query(text, values);
 
@@ -173,11 +173,10 @@ export class AuthRepository {
     return result[1];
   }
 
-  async deleteOneSession(userID: string, deviceID: string) {
-    const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "userId" = $1 
-    AND "id" = $2`;
+  async deleteOneSession(deviceID: string) {
+    const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "id" = $1`;
 
-    const values = [userID, deviceID];
+    const values = [deviceID];
 
     const result = await this.dataSource.query(text, values);
 

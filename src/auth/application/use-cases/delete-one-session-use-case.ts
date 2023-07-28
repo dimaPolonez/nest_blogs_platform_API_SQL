@@ -31,7 +31,6 @@ export class DeleteOneSessionUseCase
     }
 
     const resultDelete: number = await this.authRepository.deleteOneSession(
-      userID,
       deviceID,
     );
 
