@@ -182,12 +182,9 @@ export class SuperAdminRepository {
     ];
 
     await tablesArray.forEach((nameTable) => {
-      const textArray = [
-        `DELETE FROM "${nameTable}"`,
-        `TRUNCATE TABLE "${nameTable}" RESTART IDENTITY`,
-      ];
-      this.dataSource.query(textArray[0]);
-      this.dataSource.query(textArray[1]);
+      const text = `DELETE FROM "${nameTable}"`;
+
+      this.dataSource.query(text);
     });
 
     await this.BlogModel.deleteMany();
