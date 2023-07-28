@@ -154,8 +154,8 @@ export class AuthRepository {
   }
 
   async logoutUser(userID: string, deviceID: string) {
-    const text = `DELETE "${TablesNames.SessionsUsersInfo}" WHERE "userID" = $1 
-    AND "deviceID" <> $2;`;
+    const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "userId" = $1 
+    AND "id" <> $2`;
 
     const values = [userID, deviceID];
 
@@ -165,8 +165,8 @@ export class AuthRepository {
   }
 
   async deleteOneSession(userID: string, deviceID: string) {
-    const text = `DELETE "${TablesNames.SessionsUsersInfo}" WHERE "userID" = $1 
-    AND "deviceID" = $2;`;
+    const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "userId" = $1 
+    AND "id" = $2;`;
 
     const values = [userID, deviceID];
 
