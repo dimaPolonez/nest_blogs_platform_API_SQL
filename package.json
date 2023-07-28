@@ -2,9 +2,6 @@
   "name": "nest_blogs_platform_api_SQL",
   "version": "0.0.1",
   "description": "",
-  "engines": {
-    "node": "<15"
-  },
   "author": "",
   "private": true,
   "license": "UNLICENSED",
