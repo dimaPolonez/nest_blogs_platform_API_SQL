@@ -35,9 +35,9 @@ import {
   ConfirmEmailCommand,
   CreateNewPasswordCommand,
   CreateTokensCommand,
-  DeleteActiveSessionCommand,
   EmailResendingCommand,
   GetUserInfCommand,
+  LogoutCommand,
   PasswordRecoveryCommand,
   RegistrationUserCommand,
   UpdateTokensCommand,
@@ -152,7 +152,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     await this.commandBus.execute(
-      new DeleteActiveSessionCommand(req.user.userID, req.user.deviceId),
+      new LogoutCommand(req.user.userID, req.user.deviceId),
     );
 
     await response.clearCookie('refreshToken');

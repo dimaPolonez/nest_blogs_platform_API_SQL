@@ -1,22 +1,20 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { AuthRepository } from '../../repository/auth.repository';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SessionsUsersInfoType } from '../../../core/models';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
-export class DeleteOneSessionCommand {
+export class LogoutCommand {
   constructor(
     public readonly userID: string,
     public readonly deviceID: string,
   ) {}
 }
 
-@CommandHandler(DeleteOneSessionCommand)
-export class DeleteOneSessionUseCase
-  implements ICommandHandler<DeleteOneSessionCommand>
-{
+@CommandHandler(LogoutCommand)
+export class LogoutUseCase implements ICommandHandler<LogoutCommand> {
   constructor(protected authRepository: AuthRepository) {}
 
-  async execute(command: DeleteOneSessionCommand) {
+  async execute(command: LogoutCommand) {
     const { userID, deviceID } = command;
 
     const rowSession: SessionsUsersInfoType[] =
@@ -30,10 +28,7 @@ export class DeleteOneSessionUseCase
       throw new ForbiddenException();
     }
 
-    const resultDelete: number = await this.authRepository.deleteOneSession(
-      userID,
-      deviceID,
-    );
+    const resultDelete: number = await this.authRepository.logoutUser(userID);
 
     if (!resultDelete) {
       throw new NotFoundException();

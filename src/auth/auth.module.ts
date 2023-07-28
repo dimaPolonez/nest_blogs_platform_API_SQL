@@ -24,16 +24,17 @@ import {
   ConfirmEmailUseCase,
   CreateNewPasswordUseCase,
   CreateTokensUseCase,
-  DeleteActiveSessionUseCase,
   DeleteOneSessionUseCase,
   EmailResendingUseCase,
   GetAllSessionUseCase,
   GetUserInfUseCase,
+  LogoutUseCase,
   PasswordRecoveryUseCase,
   RegistrationUserUseCase,
   UpdateTokensUseCase,
 } from './application/use-cases';
 import { CqrsModule } from '@nestjs/cqrs';
+import { DeleteAllSessionsUseCase } from './application/use-cases/delete-all-sessions-use-case';
 
 const modules = [CqrsModule, PassportModule, JwtModule];
 
@@ -53,10 +54,11 @@ const useCases = [
   ConfirmEmailUseCase,
   RegistrationUserUseCase,
   EmailResendingUseCase,
-  DeleteActiveSessionUseCase,
+  LogoutUseCase,
   GetUserInfUseCase,
   GetAllSessionUseCase,
   DeleteOneSessionUseCase,
+  DeleteAllSessionsUseCase,
 ];
 
 @Module({

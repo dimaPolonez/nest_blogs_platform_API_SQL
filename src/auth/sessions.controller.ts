@@ -12,11 +12,11 @@ import {
 import { JwtRefreshGuard } from '../guards-handlers/guard';
 import { GetSessionUserType } from '../core/models';
 import {
-  DeleteActiveSessionCommand,
   DeleteOneSessionCommand,
   GetAllSessionCommand,
 } from './application/use-cases';
 import { CommandBus } from '@nestjs/cqrs';
+import { DeleteAllSessionsCommand } from './application/use-cases/delete-all-sessions-use-case';
 
 @Controller('security')
 export class SessionsController {
@@ -35,7 +35,7 @@ export class SessionsController {
   @Delete('devices')
   async deleteUserAllSession(@Request() req) {
     return await this.commandBus.execute(
-      new DeleteActiveSessionCommand(req.user.userID, req.user.deviceId),
+      new DeleteAllSessionsCommand(req.user.userID, req.user.deviceId),
     );
   }
 
