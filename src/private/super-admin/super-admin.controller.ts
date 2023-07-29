@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   Query,
@@ -16,9 +17,7 @@ import { BasicAuthGuard } from '../../guards-handlers/guard';
 import { BanBlogDto, QueryBlogsDto } from '../../core/dto/blogs';
 import {
   GetAllBlogsAdminType,
-  GetAllBlogsType,
   GetAllUsersAdminType,
-  GetBlogAdminType,
   GetUserAdminType,
 } from '../../core/models';
 import { SuperAdminQueryRepository } from './repository/super-admin.query-repository';
@@ -29,8 +28,6 @@ import {
   CreateUserCommand,
   DeleteUserCommand,
 } from './application/use-cases';
-import { BlogIdPipe } from '../../validation/pipes/blogId.pipe';
-import { UserIdPipe } from '../../validation/pipes/userId.pipe';
 import {
   BanUserDto,
   CreateUserDto,
@@ -49,7 +46,7 @@ export class SuperAdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async banBlog(
     @Body() banBlogDTO: BanBlogDto,
-    @Param('id', BlogIdPipe) blogID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
   ) {
     await this.commandBus.execute(new BanBlogCommand(banBlogDTO, blogID));
   }
@@ -58,8 +55,8 @@ export class SuperAdminController {
   @Put('blogs/:id/bind-with-user/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async bindBlog(
-    @Param('id', BlogIdPipe) blogID: string,
-    @Param('userId', UserIdPipe) userID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
+    @Param('userId', new ParseUUIDPipe()) userID: string,
   ) {
     await this.commandBus.execute(new BindBlogCommand(blogID, userID));
   }
@@ -78,7 +75,7 @@ export class SuperAdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async banUser(
     @Body() banUserDTO: BanUserDto,
-    @Param('id', UserIdPipe) userID: string,
+    @Param('id', new ParseUUIDPipe()) userID: string,
   ) {
     await this.commandBus.execute(new BanUserCommand(banUserDTO, userID));
   }
@@ -96,17 +93,13 @@ export class SuperAdminController {
   @Post('users')
   @HttpCode(HttpStatus.CREATED)
   async createUser(@Body() userDTO: CreateUserDto): Promise<GetUserAdminType> {
-    const newUserID: string = await this.commandBus.execute(
-      new CreateUserCommand(userDTO),
-    );
-
-    return await this.superAdminQueryRepository.findUserById(newUserID);
+    return await this.commandBus.execute(new CreateUserCommand(userDTO));
   }
 
   @UseGuards(BasicAuthGuard)
   @Delete('users/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteUser(@Param('id') userID: string) {
+  async deleteUser(@Param('id', new ParseUUIDPipe()) userID: string) {
     await this.commandBus.execute(new DeleteUserCommand(userID));
   }
 }

@@ -33,6 +33,12 @@ export type CreateUserType = {
   email: string;
 };
 
+export type NewUserDTOType = {
+  login: string;
+  hushPass: string;
+  email: string;
+};
+
 export type BanUserType = {
   isBanned: boolean;
   banReason: string;

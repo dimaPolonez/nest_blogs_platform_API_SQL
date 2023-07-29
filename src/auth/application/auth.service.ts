@@ -1,8 +1,13 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { LoginType } from '../../core/models';
+import {
+  LoginType,
+  SessionsUsersInfoType,
+  UsersTableType,
+} from '../../core/models';
 import { BcryptAdapter } from '../../adapters';
 import { BlogModelType, UserModel, UserModelType } from '../../core/entity';
 import { AuthRepository } from '../repository/auth.repository';
+import { isAfter } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -10,16 +15,6 @@ export class AuthService {
     protected authRepository: AuthRepository,
     protected bcryptAdapter: BcryptAdapter,
   ) {}
-
-  async checkUser(userID: string): Promise<boolean> {
-    const checkedUser: UserModelType | null =
-      await this.authRepository.findUserById(userID);
-
-    if (!checkedUser) {
-      return false;
-    }
-    return true;
-  }
 
   async userBlockedToBlog(userID: string, blogID: string): Promise<boolean> {
     const blockedUserArray: BlogModelType | null =
@@ -37,15 +32,18 @@ export class AuthService {
   }
 
   async checkedConfirmCode(codeConfirm: string): Promise<boolean> {
-    const findUserByCode: UserModelType | null =
-      await this.authRepository.findUserByCode(codeConfirm);
-    if (!findUserByCode) {
+    const rowUser: UsersTableType[] = await this.authRepository.findUserByCode(
+      codeConfirm,
+    );
+
+    if (rowUser.length < 1) {
       return false;
     }
 
-    const codeValid: boolean = await findUserByCode.checkedActivateCodeValid();
+    const dateExpiredCode = Date.parse(rowUser[0].codeActivatedExpired);
+    const dateNow = new Date();
 
-    if (!codeValid) {
+    if (!isAfter(dateExpiredCode, dateNow)) {
       return false;
     }
 
@@ -53,10 +51,11 @@ export class AuthService {
   }
 
   async checkedUniqueEmail(email: string): Promise<boolean> {
-    const checkedUniqueEmail: UserModelType | null =
-      await this.authRepository.checkedEmail(email);
+    const rowUser: UsersTableType[] = await this.authRepository.checkedEmail(
+      email,
+    );
 
-    if (checkedUniqueEmail) {
+    if (rowUser.length > 0) {
       return false;
     }
 
@@ -64,14 +63,15 @@ export class AuthService {
   }
 
   async checkedEmailToBase(email: string): Promise<boolean> {
-    const checkedEmailToBase: UserModelType | null =
-      await this.authRepository.checkedEmail(email);
+    const rowUser: UsersTableType[] = await this.authRepository.checkedEmail(
+      email,
+    );
 
-    if (!checkedEmailToBase) {
+    if (rowUser.length < 1) {
       return false;
     }
 
-    if (checkedEmailToBase.activateUser.confirm === true) {
+    if (rowUser[0].userIsConfirmed === true) {
       return false;
     }
 
@@ -79,10 +79,10 @@ export class AuthService {
   }
 
   async checkedUniqueLogin(login: string): Promise<boolean> {
-    const checkedUniqueLogin: UserModelType | null =
+    const rowUser: UsersTableType[] =
       await this.authRepository.checkedUniqueLogin(login);
 
-    if (checkedUniqueLogin) {
+    if (rowUser.length > 0) {
       return false;
     }
 
@@ -101,57 +101,47 @@ export class AuthService {
   }
 
   async findUserLogin(userID: string): Promise<string> {
-    const findUser: UserModelType | null =
-      await this.authRepository.findUserById(userID);
-
-    if (!findUser || findUser.sessionsUser.length === 0) {
-      throw new UnauthorizedException();
+    const rowUser: UsersTableType[] = await this.authRepository.findUser(
+      userID,
+    );
+    if (rowUser.length < 1) {
+      throw new UnauthorizedException('Token is not valid');
     }
-
-    return findUser.login;
+    return rowUser[0].login;
   }
   async validateUser(loginDTO: LoginType): Promise<null | string> {
-    const findUser: UserModelType | null =
-      await this.authRepository.findUserByEmailOrLogin(loginDTO.loginOrEmail);
+    const rowUser: UsersTableType[] =
+      await this.authRepository.findUserEmailOrLogin(loginDTO.loginOrEmail);
 
-    if (!findUser || findUser.banInfo.isBanned === true) {
+    if (rowUser.length < 1 || rowUser[0].userIsBanned === true) {
       return null;
     }
 
     const validPassword: boolean = await this.bcryptAdapter.hushCompare(
       loginDTO.password,
-      findUser.hushPass,
+      rowUser[0].hushPass,
     );
 
     if (!validPassword) {
       return null;
     }
 
-    return findUser.id;
+    return rowUser[0].id;
   }
 
   async checkedActiveSession(
-    userID: string,
     deviceID: string,
     lastDateToken: number,
   ): Promise<boolean> {
-    const findUser: UserModelType | null =
-      await this.authRepository.findUserById(userID);
+    const rawSession: SessionsUsersInfoType[] =
+      await this.authRepository.findSession(deviceID);
 
-    if (!findUser) {
-      return false;
-    }
-
-    const findSession = findUser.sessionsUser.find(
-      (value) => value.deviceId === deviceID,
-    );
-
-    if (!findSession) {
+    if (rawSession.length < 1) {
       return false;
     }
 
     const lastActiveToSecond = Number(
-      Date.parse(findSession.lastActiveDate).toString().slice(0, 10),
+      Date.parse(rawSession[0].lastActiveDate).toString().slice(0, 10),
     );
 
     if (lastActiveToSecond > lastDateToken) {

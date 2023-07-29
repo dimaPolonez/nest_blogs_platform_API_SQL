@@ -10,14 +10,10 @@ import {
   Post,
   Put,
   Query,
-  Req,
   Request,
   UseGuards,
 } from '@nestjs/common';
-import {
-  JwtAccessGuard,
-  QuestJwtAccessGuard,
-} from '../../guards-handlers/guard';
+import { JwtAccessGuard } from '../../guards-handlers/guard';
 import {
   BanUserOfBlogDto,
   CreateBlogDto,
@@ -29,13 +25,11 @@ import {
 } from '../../core/dto/blogs';
 import {
   GetAllBlogsType,
-  GetAllCommentsOfPostType,
   GetAllCommentsToBloggerType,
   GetAllPostsOfBlogType,
   getBanAllUserOfBlogType,
   GetBlogType,
   GetPostOfBlogType,
-  MinimalBlog,
 } from '../../core/models';
 import { BloggerQueryRepository } from './repository/blogger.query-repository';
 import {
@@ -48,9 +42,6 @@ import {
   UpdatePostOfBlogToBloggerCommand,
 } from './application/use-cases';
 import { QueryCommentDto } from '../../core/dto/posts';
-import { Min } from 'class-validator';
-import { Type } from 'class-transformer';
-import { UserIdPipe } from '../../validation/pipes/userId.pipe';
 
 @Controller('blogger')
 export class BloggerController {

@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { BlogModel, BlogModelType } from '../../../core/entity';
 import { SuperAdminRepository } from '../repository/super-admin.repository';
+import { UsersTableType } from '../../../core/models';
 
 @Injectable()
 export class SuperAdminService {
@@ -12,6 +13,16 @@ export class SuperAdminService {
 
     if (!checkedBlog) {
       return false;
+    }
+    return true;
+  }
+
+  async checkedUser(userID: string): Promise<boolean> {
+    const checkedUser: UsersTableType[] =
+      await this.superAdminRepository.checkedUser(userID);
+
+    if (checkedUser.length < 1) {
+      throw new NotFoundException();
     }
     return true;
   }

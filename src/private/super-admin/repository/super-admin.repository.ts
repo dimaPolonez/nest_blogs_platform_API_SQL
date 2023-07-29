@@ -12,13 +12,21 @@ import {
   UserModelType,
 } from '../../../core/entity';
 import {
+  BanUserType,
+  NewUserDTOType,
+  TablesNames,
   UpdateArrayCommentsType,
   UpdateArrayPostsType,
+  UsersTableType,
 } from '../../../core/models';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class SuperAdminRepository {
   constructor(
+    @InjectDataSource()
+    protected dataSource: DataSource,
     @InjectModel(BlogModel.name)
     private readonly BlogModel: Model<BlogModelType>,
     @InjectModel(PostModel.name)
@@ -29,17 +37,34 @@ export class SuperAdminRepository {
     private readonly UserModel: Model<UserModelType>,
   ) {}
 
-  async banedActivityUser(isBanned: boolean, userID: string) {
-    await this.CommentModel.updateMany(
-      {
-        'commentatorInfo.userId': userID,
-      },
-      { $set: { 'commentatorInfo.isBanned': isBanned } },
-    );
+  async checkedUser(userID: string): Promise<UsersTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
+    const values = [userID];
 
-    if (isBanned === true) {
-      await this.UserModel.updateOne({ _id: userID }, { sessionsUser: [] });
+    return await this.dataSource.query(text, values);
+  }
+
+  async createUser(newUserDTO: NewUserDTOType): Promise<UsersTableType[]> {
+    const text = `INSERT INTO "${TablesNames.Users}"(login, "hushPass", email) 
+                  VALUES($1, $2, $3) RETURNING *`;
+    const values = [newUserDTO.login, newUserDTO.hushPass, newUserDTO.email];
+
+    return await this.dataSource.query(text, values);
+  }
+  async banedUser(banUserDTO: BanUserType, userID: string): Promise<number> {
+    let text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, 
+                "banDate" = NOW(), "banReason" = $2 WHERE "id" = $3`;
+    let values = [banUserDTO.isBanned, banUserDTO.banReason, userID];
+
+    if (banUserDTO.isBanned === false) {
+      text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = false, 
+              "banDate" = null, "banReason" = null WHERE "id" = $1`;
+      values = [userID];
     }
+
+    const result = await this.dataSource.query(text, values);
+
+    return result[1];
   }
 
   async banedBlog(isBanned: boolean, blogID: string) {
@@ -124,8 +149,20 @@ export class SuperAdminRepository {
     return this.UserModel.findById({ _id: userID });
   }
 
-  async deleteUser(userID: string) {
-    await this.UserModel.deleteOne({ _id: userID });
+  async findUserByIdSql(userID: string): Promise<UsersTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
+    const values = [userID];
+
+    return await this.dataSource.query(text, values);
+  }
+
+  async deleteUser(userID: string): Promise<number> {
+    const text = `DELETE FROM "${TablesNames.Users}" WHERE "id" = $1`;
+    const values = [userID];
+
+    const result = await this.dataSource.query(text, values);
+
+    return result[1];
   }
 
   async save(model: BlogModelType | PostModelType | UserModelType) {
@@ -133,6 +170,23 @@ export class SuperAdminRepository {
   }
 
   async deleteAllCollections() {
+    const tablesArray: TablesNames[] = [
+      TablesNames.Users,
+      TablesNames.Blogs,
+      TablesNames.Posts,
+      TablesNames.Comments,
+      TablesNames.SessionsUsersInfo,
+      TablesNames.BanAllUsersOfBlogInfo,
+      TablesNames.ExtendedLikesPostInfo,
+      TablesNames.ExtendedLikesCommentInfo,
+    ];
+
+    await tablesArray.forEach((nameTable) => {
+      const text = `DELETE FROM "${nameTable}"`;
+
+      this.dataSource.query(text);
+    });
+
     await this.BlogModel.deleteMany();
     await this.PostModel.deleteMany();
     await this.CommentModel.deleteMany();

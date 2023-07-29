@@ -1,3 +1,4 @@
+export * from './sqlTable.model';
 export * from './getBlog.model';
 export * from './getComment.model';
 export * from './getPost.model';

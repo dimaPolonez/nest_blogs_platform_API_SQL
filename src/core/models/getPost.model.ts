@@ -4,6 +4,11 @@ export enum MyLikeStatus {
   Dislike = 'Dislike',
 }
 
+export enum EntityLikes {
+  post = 'post',
+  comment = 'comment',
+}
+
 export type NewestLikesType = {
   userId: string;
   login: string;

@@ -9,6 +9,8 @@ import {
   GetUserAdminType,
   QueryBlogType,
   QueryUsersAdminType,
+  TablesNames,
+  UsersTableType,
 } from '../../../core/models';
 import {
   BlogModel,
@@ -16,6 +18,8 @@ import {
   UserModel,
   UserModelType,
 } from '../../../core/entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class SuperAdminQueryRepository {
@@ -24,6 +28,8 @@ export class SuperAdminQueryRepository {
     private readonly BlogModel: Model<BlogModelType>,
     @InjectModel(UserModel.name)
     private readonly UserModel: Model<UserModelType>,
+    @InjectDataSource()
+    protected dataSource: DataSource,
   ) {}
 
   sortObject(sortDir: string) {
@@ -78,71 +84,63 @@ export class SuperAdminQueryRepository {
     };
   }
 
-  async findUserById(userID: string): Promise<GetUserAdminType> {
-    const findUserSmart = await this.UserModel.findById(userID);
-
-    if (!findUserSmart) {
-      throw new NotFoundException('user not found');
+  async userBannedChecked(banStatus: string) {
+    switch (banStatus) {
+      case 'banned':
+        return `"userIsBanned"=true AND`;
+      case 'notBanned':
+        return `"userIsBanned"=false AND`;
+      case 'all':
+        return ``;
     }
-
-    return {
-      id: findUserSmart.id,
-      login: findUserSmart.login,
-      email: findUserSmart.email,
-      createdAt: findUserSmart.createdAt,
-      banInfo: {
-        isBanned: findUserSmart.banInfo.isBanned,
-        banDate: findUserSmart.banInfo.banDate,
-        banReason: findUserSmart.banInfo.banReason,
-      },
-    };
   }
+
   async getAllUsersAdmin(
     queryAll: QueryUsersAdminType,
   ): Promise<GetAllUsersAdminType> {
-    let bannedParams = {};
+    const banStatusFilter = await this.userBannedChecked(queryAll.banStatus);
 
-    switch (queryAll.banStatus) {
-      case 'banned':
-        bannedParams = { 'banInfo.isBanned': true };
-        break;
-      case 'notBanned':
-        bannedParams = { 'banInfo.isBanned': false };
-        break;
-    }
+    const text1 = `SELECT * FROM "${TablesNames.Users}"
+          WHERE ${banStatusFilter}
+          ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
+          OR "email" ILIKE '%${queryAll.searchEmailTerm}%')
+          ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+          LIMIT $1 OFFSET $2`;
 
-    const allUsers: UserModelType[] = await this.UserModel.find({
-      ...bannedParams,
-      $or: [
-        { login: new RegExp(queryAll.searchLoginTerm, 'gi') },
-        { email: new RegExp(queryAll.searchEmailTerm, 'gi') },
-      ],
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({ [queryAll.sortBy]: this.sortObject(queryAll.sortDirection) });
+    const text2 = `SELECT * FROM "${TablesNames.Users}"
+          WHERE ${banStatusFilter}
+          ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
+          OR "email" ILIKE '%${queryAll.searchEmailTerm}%')`;
 
-    const allMapsUsers: GetUserAdminType[] = allUsers.map((field) => {
+    const values = [
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
+
+    const rawAllUsers: UsersTableType[] = await this.dataSource.query(
+      text1,
+      values,
+    );
+
+    const rawAllUsersCount: UsersTableType[] = await this.dataSource.query(
+      text2,
+    );
+
+    const mappedAllUsers: GetUserAdminType[] = rawAllUsers.map((field) => {
       return {
         id: field.id,
         login: field.login,
         email: field.email,
         createdAt: field.createdAt,
         banInfo: {
-          isBanned: field.banInfo.isBanned,
-          banDate: field.banInfo.banDate,
-          banReason: field.banInfo.banReason,
+          isBanned: field.userIsBanned,
+          banDate: field.banDate,
+          banReason: field.banReason,
         },
       };
     });
 
-    const allCount: number = await this.UserModel.countDocuments({
-      ...bannedParams,
-      $or: [
-        { login: new RegExp(queryAll.searchLoginTerm, 'gi') },
-        { email: new RegExp(queryAll.searchEmailTerm, 'gi') },
-      ],
-    });
+    const allCount: number = rawAllUsersCount.length;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
@@ -151,7 +149,7 @@ export class SuperAdminQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsUsers,
+      items: mappedAllUsers,
     };
   }
 }

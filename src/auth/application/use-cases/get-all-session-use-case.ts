@@ -1,7 +1,9 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { AuthRepository } from '../../repository/auth.repository';
-import { UserModelType } from '../../../core/entity';
-import { GetSessionUserType } from '../../../core/models';
+import {
+  GetSessionUserType,
+  SessionsUsersInfoType,
+} from '../../../core/models';
 
 export class GetAllSessionCommand {
   constructor(public readonly userID: string) {}
@@ -16,13 +18,12 @@ export class GetAllSessionUseCase
   async execute(command: GetAllSessionCommand): Promise<GetSessionUserType[]> {
     const { userID } = command;
 
-    const findUser: UserModelType = await this.authRepository.findUserById(
-      userID,
-    );
+    const rowSessions: SessionsUsersInfoType[] =
+      await this.authRepository.findUserSessions(userID);
 
-    return findUser.sessionsUser.map((field) => {
+    return rowSessions.map((field) => {
       return {
-        deviceId: field.deviceId,
+        deviceId: field.id,
         ip: field.ip,
         lastActiveDate: field.lastActiveDate,
         title: field.title,

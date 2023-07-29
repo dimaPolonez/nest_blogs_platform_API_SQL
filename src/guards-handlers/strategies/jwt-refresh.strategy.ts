@@ -21,7 +21,6 @@ export class JwtRefreshStrategy extends PassportStrategy(
   async validate(payload: any) {
     const validateSession: boolean =
       await this.authService.checkedActiveSession(
-        payload.userID,
         payload.deviceId,
         payload.iat,
       );

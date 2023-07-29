@@ -24,7 +24,6 @@ import {
   UpdatePostOfBlogToBloggerUseCase,
 } from './application/use-cases';
 import { AuthModule } from '../../auth/auth.module';
-import { UserIdPipe } from '../../validation/pipes/userId.pipe';
 
 const modules = [CqrsModule, AuthModule];
 

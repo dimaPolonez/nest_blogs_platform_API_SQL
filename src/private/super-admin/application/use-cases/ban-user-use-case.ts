@@ -86,22 +86,17 @@ export class BanUserUseCase implements ICommandHandler<BanUserCommand> {
   async execute(command: BanUserCommand) {
     const { banUserDTO, userID } = command;
 
-    const findUser: UserModelType | null =
-      await this.superAdminRepository.findUserById(userID);
-
-    if (!findUser) {
-      throw new NotFoundException('user not found');
-    }
-    await findUser.banUser(banUserDTO);
-
-    await this.superAdminRepository.banedActivityUser(
-      banUserDTO.isBanned,
+    const resultUpdate: number = await this.superAdminRepository.banedUser(
+      banUserDTO,
       userID,
     );
 
-    await this.updatePostLikes(banUserDTO.isBanned, userID);
-    await this.updateCommentLikes(banUserDTO.isBanned, userID);
+    if (!resultUpdate) {
+      throw new NotFoundException();
+    }
 
-    await this.superAdminRepository.save(findUser);
+    /*    await this.updatePostLikes(banUserDTO.isBanned, userID);
+    await this.updateCommentLikes(banUserDTO.isBanned, userID);
+    await this.superAdminRepository.save(findUser);*/
   }
 }

@@ -16,6 +16,7 @@ import {
   LocalStrategy,
   QuestJwtAccessStrategy,
 } from './guards-handlers/strategies';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 const modules = [
   AuthModule,
@@ -36,6 +37,17 @@ const strategies = [
 
 @Module({
   imports: [
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: CONFIG.PGHOST,
+      port: 5432,
+      username: CONFIG.PGUSER,
+      password: CONFIG.PGPASSWORD,
+      database: CONFIG.PGDATABASE,
+      ssl: true,
+      autoLoadEntities: false,
+      synchronize: false,
+    }),
     CONFIG.START_MODULE,
     MongooseModule.forRoot(CONFIG.MONGO_DB),
     ...modules,

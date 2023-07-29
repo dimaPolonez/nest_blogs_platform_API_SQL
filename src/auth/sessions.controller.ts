@@ -5,17 +5,18 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { JwtRefreshGuard } from '../guards-handlers/guard';
 import { GetSessionUserType } from '../core/models';
 import {
-  DeleteActiveSessionCommand,
-  DeleteAllSessionCommand,
+  DeleteOneSessionCommand,
   GetAllSessionCommand,
 } from './application/use-cases';
 import { CommandBus } from '@nestjs/cqrs';
+import { DeleteAllSessionsCommand } from './application/use-cases/delete-all-sessions-use-case';
 
 @Controller('security')
 export class SessionsController {
@@ -34,16 +35,19 @@ export class SessionsController {
   @Delete('devices')
   async deleteUserAllSession(@Request() req) {
     return await this.commandBus.execute(
-      new DeleteAllSessionCommand(req.user.userID, req.user.deviceId),
+      new DeleteAllSessionsCommand(req.user.userID, req.user.deviceId),
     );
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtRefreshGuard)
   @Delete('devices/:id')
-  async deleteUserOneSession(@Request() req, @Param('id') deviceID: string) {
+  async deleteUserOneSession(
+    @Request() req,
+    @Param('id', new ParseUUIDPipe()) deviceID: string,
+  ) {
     await this.commandBus.execute(
-      new DeleteActiveSessionCommand(req.user.userID, deviceID),
+      new DeleteOneSessionCommand(req.user.userID, deviceID),
     );
   }
 }

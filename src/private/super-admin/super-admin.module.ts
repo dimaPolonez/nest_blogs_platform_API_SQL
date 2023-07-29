@@ -11,7 +11,6 @@ import {
   UserModel,
   UserModelSchema,
 } from '../../core/entity';
-import { BasicAuthGuard } from '../../guards-handlers/guard';
 import { SuperAdminController } from './super-admin.controller';
 import {
   BanBlogUseCase,
@@ -22,16 +21,12 @@ import {
 } from './application/use-cases';
 import { SuperAdminRepository } from './repository/super-admin.repository';
 import { SuperAdminQueryRepository } from './repository/super-admin.query-repository';
-import { BlogIdPipe } from '../../validation/pipes/blogId.pipe';
-import { UserIdPipe } from '../../validation/pipes/userId.pipe';
 import { BlogsModule } from '../../public/blogs/blogs.module';
 import { BcryptAdapter } from '../../adapters';
 import { SuperAdminService } from './application/super-admin.service';
 import { AuthModule } from '../../auth/auth.module';
 
 const modules = [CqrsModule, AuthModule, BlogsModule];
-
-const pipes = [BlogIdPipe, UserIdPipe];
 
 const adapters = [BcryptAdapter];
 
@@ -58,7 +53,6 @@ const useCases = [
     SuperAdminRepository,
     SuperAdminQueryRepository,
     SuperAdminService,
-    ...pipes,
     ...adapters,
     ...useCases,
   ],
