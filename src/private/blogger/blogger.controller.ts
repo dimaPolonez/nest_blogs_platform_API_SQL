@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   Query,
@@ -92,10 +93,9 @@ export class BloggerController {
     @Body() blogDTO: CreateBlogDto,
     @Request() req,
   ): Promise<GetBlogType> {
-    const newBlogID: string = await this.commandBus.execute(
+    return await this.commandBus.execute(
       new CreateBlogToBloggerCommand(req.user.userID, req.user.login, blogDTO),
     );
-    return await this.bloggerQueryRepository.findBlogById(newBlogID);
   }
   @UseGuards(JwtAccessGuard)
   @Get('blogs')
@@ -114,7 +114,7 @@ export class BloggerController {
   @Post('blogs/:id/posts')
   @HttpCode(HttpStatus.CREATED)
   async createPostOfBlog(
-    @Param('id') blogID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
     @Body() postDTO: CreatePostOfBlogDto,
     @Request() req,
   ): Promise<GetPostOfBlogType> {

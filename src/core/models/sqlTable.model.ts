@@ -33,6 +33,7 @@ export type BlogsTableType = {
   createdAt: string;
   isMembership: boolean;
   userOwnerId: string;
+  userOwnerLogin: string;
   blogIsBanned: boolean;
   banDate: string;
 };

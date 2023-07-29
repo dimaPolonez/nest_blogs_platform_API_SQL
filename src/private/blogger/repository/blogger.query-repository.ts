@@ -31,10 +31,14 @@ import {
   PostModel,
   PostModelType,
 } from '../../../core/entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class BloggerQueryRepository {
   constructor(
+    @InjectDataSource()
+    protected dataSource: DataSource,
     @InjectModel(BlogModel.name)
     private readonly BlogModel: Model<BlogModelType>,
     @InjectModel(PostModel.name)

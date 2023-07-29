@@ -7,15 +7,42 @@ import {
   PostModel,
   PostModelType,
 } from '../../../core/entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import {
+  BlogsTableType,
+  CreateBlogType,
+  TablesNames,
+} from '../../../core/models';
 
 @Injectable()
 export class BloggerRepository {
   constructor(
+    @InjectDataSource()
+    protected dataSource: DataSource,
     @InjectModel(BlogModel.name)
     private readonly BlogModel: Model<BlogModelType>,
     @InjectModel(PostModel.name)
     private readonly PostModel: Model<PostModelType>,
   ) {}
+
+  async createBlog(
+    blogDTO: CreateBlogType,
+    userID: string,
+    userLogin: string,
+  ): Promise<BlogsTableType[]> {
+    const text = `INSERT INTO "${TablesNames.Blogs}"("name", "description",
+                  "websiteUrl", "userOwnerId", "userOwnerLogin") VALUES($1, $2, $3, $4, $5) RETURNING *`;
+    const values = [
+      blogDTO.name,
+      blogDTO.description,
+      blogDTO.websiteUrl,
+      userID,
+      userLogin,
+    ];
+
+    return await this.dataSource.query(text, values);
+  }
 
   async findBlogById(blogID: string): Promise<BlogModelType | null> {
     return this.BlogModel.findById({ _id: blogID });
