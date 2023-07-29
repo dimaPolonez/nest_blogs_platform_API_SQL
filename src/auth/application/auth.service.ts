@@ -5,7 +5,7 @@ import {
   UsersTableType,
 } from '../../core/models';
 import { BcryptAdapter } from '../../adapters';
-import { BlogModelType, UserModel, UserModelType } from '../../core/entity';
+import { BlogModelType, UserModelType } from '../../core/entity';
 import { AuthRepository } from '../repository/auth.repository';
 import { isAfter } from 'date-fns';
 

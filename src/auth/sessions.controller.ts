@@ -12,11 +12,11 @@ import {
 import { JwtRefreshGuard } from '../guards-handlers/guard';
 import { GetSessionUserType } from '../core/models';
 import {
+  DeleteAllSessionsCommand,
   DeleteOneSessionCommand,
   GetAllSessionCommand,
 } from './application/use-cases';
 import { CommandBus } from '@nestjs/cqrs';
-import { DeleteAllSessionsCommand } from './application/use-cases/delete-all-sessions-use-case';
 
 @Controller('security')
 export class SessionsController {

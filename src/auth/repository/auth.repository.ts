@@ -11,7 +11,6 @@ import {
   AuthObjectType,
   ConfirmUserType,
   SessionsUsersInfoType,
-  SessionUserType,
   TablesNames,
   UserRegistrationDTO,
   UsersTableType,
