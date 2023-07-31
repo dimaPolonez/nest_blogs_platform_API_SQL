@@ -41,6 +41,7 @@ export type BlogsTableType = {
 export type PostsTableType = {
   id: string;
   blogId: string;
+  blogName: string;
   title: string;
   shortDescription: string;
   content: string;

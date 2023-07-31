@@ -8,6 +8,7 @@ import {
   PostModel,
   PostModelType,
 } from '../../../../core/entity';
+import { BlogsTableType } from '../../../../core/models';
 
 export class DeletePostOfBlogToBloggerCommand {
   constructor(
@@ -30,24 +31,23 @@ export class DeletePostOfBlogToBloggerUseCase
   async execute(command: DeletePostOfBlogToBloggerCommand) {
     const { bloggerId, blogID, postID } = command;
 
-    const findBlog: BlogModelType | null =
-      await this.bloggerRepository.findBlogById(blogID);
+    const rawBlog: BlogsTableType[] = await this.bloggerRepository.findRawBlog(
+      blogID,
+    );
 
-    if (!findBlog) {
+    if (rawBlog.length < 1) {
       throw new NotFoundException('blog not found');
     }
 
-    if (findBlog.blogOwnerInfo.userId !== bloggerId) {
+    if (rawBlog[0].userOwnerId !== bloggerId) {
       throw new ForbiddenException('The user is not the owner of the blog');
     }
 
-    const findPost: PostModelType | null =
-      await this.bloggerRepository.findPostById(postID);
+    const resultDelete: number =
+      await this.bloggerRepository.deleteRawPostOfBlog(postID);
 
-    if (!findPost) {
-      throw new NotFoundException('post not found');
+    if (!resultDelete) {
+      throw new NotFoundException();
     }
-
-    await this.bloggerRepository.deletePost(postID);
   }
 }

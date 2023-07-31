@@ -68,7 +68,7 @@ export class BloggerController {
   @Put('blogs/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async updateBlog(
-    @Param('id') blogID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
     @Body() blogDTO: UpdateBlogDto,
     @Request() req,
   ) {
@@ -80,7 +80,10 @@ export class BloggerController {
   @UseGuards(JwtAccessGuard)
   @Delete('blogs/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteBlog(@Param('id') blogID: string, @Request() req) {
+  async deleteBlog(
+    @Param('id', new ParseUUIDPipe()) blogID: string,
+    @Request() req,
+  ) {
     await this.commandBus.execute(
       new DeleteBlogToBloggerCommand(req.user.userID, blogID),
     );
@@ -118,11 +121,9 @@ export class BloggerController {
     @Body() postDTO: CreatePostOfBlogDto,
     @Request() req,
   ): Promise<GetPostOfBlogType> {
-    const newPostOfBlogID: string = await this.commandBus.execute(
+    return await this.commandBus.execute(
       new CreatePostOfBlogToBloggerCommand(req.user.userID, blogID, postDTO),
     );
-
-    return await this.bloggerQueryRepository.findPostById(newPostOfBlogID);
   }
 
   @UseGuards(JwtAccessGuard)
@@ -130,7 +131,7 @@ export class BloggerController {
   @HttpCode(HttpStatus.OK)
   async getAllPostsOfBlogToBlogger(
     @Request() req,
-    @Param('id') blogID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
     @Query() queryAll: QueryPostOfBlogDto,
   ): Promise<GetAllPostsOfBlogType> {
     return await this.bloggerQueryRepository.getAllPostsOfBlogToBlogger(
@@ -144,8 +145,8 @@ export class BloggerController {
   @Put('blogs/:blogId/posts/:postId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async updatePostOfBlog(
-    @Param('blogId') blogID: string,
-    @Param('postId') postID: string,
+    @Param('blogId', new ParseUUIDPipe()) blogID: string,
+    @Param('postId', new ParseUUIDPipe()) postID: string,
     @Body() postDTO: UpdatePostOfBlogDto,
     @Request() req,
   ) {
@@ -163,8 +164,8 @@ export class BloggerController {
   @Delete('blogs/:blogId/posts/:postId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePostOfBlog(
-    @Param('blogId') blogID: string,
-    @Param('postId') postID: string,
+    @Param('blogId', new ParseUUIDPipe()) blogID: string,
+    @Param('postId', new ParseUUIDPipe()) postID: string,
     @Request() req,
   ) {
     await this.commandBus.execute(
@@ -176,7 +177,7 @@ export class BloggerController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async banUserOfBlog(
     @Body() banUserOfBlogDTO: BanUserOfBlogDto,
-    @Param('id') userID: string,
+    @Param('id', new ParseUUIDPipe()) userID: string,
     @Request() req,
   ) {
     await this.commandBus.execute(
@@ -187,7 +188,7 @@ export class BloggerController {
   @Get('users/blog/:id')
   @HttpCode(HttpStatus.OK)
   async getBanAllUserOfBlog(
-    @Param('id') blogID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
     @Query() queryAll: QueryBlogsDto,
     @Request() req,
   ): Promise<getBanAllUserOfBlogType> {

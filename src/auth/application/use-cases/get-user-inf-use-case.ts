@@ -14,18 +14,18 @@ export class GetUserInfUseCase implements ICommandHandler<GetUserInfCommand> {
   async execute(command: GetUserInfCommand) {
     const { userID } = command;
 
-    const rowUser: UsersTableType[] = await this.authRepository.findUser(
+    const rawUser: UsersTableType[] = await this.authRepository.findUser(
       userID,
     );
 
-    if (rowUser.length < 1) {
+    if (rawUser.length < 1) {
       throw new NotFoundException();
     }
 
     return <AboutMeType>{
-      email: rowUser[0].email,
-      login: rowUser[0].login,
-      userId: rowUser[0].id,
+      email: rawUser[0].email,
+      login: rawUser[0].login,
+      userId: rawUser[0].id,
     };
   }
 }

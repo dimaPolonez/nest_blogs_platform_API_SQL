@@ -18,10 +18,10 @@ export class GetAllSessionUseCase
   async execute(command: GetAllSessionCommand): Promise<GetSessionUserType[]> {
     const { userID } = command;
 
-    const rowSessions: SessionsUsersInfoType[] =
+    const rawSessions: SessionsUsersInfoType[] =
       await this.authRepository.findUserSessions(userID);
 
-    return rowSessions.map((field) => {
+    return rawSessions.map((field) => {
       return {
         deviceId: field.id,
         ip: field.ip,
