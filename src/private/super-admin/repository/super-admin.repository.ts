@@ -52,14 +52,40 @@ export class SuperAdminRepository {
     return await this.dataSource.query(text, values);
   }
   async banedUser(banUserDTO: BanUserType, userID: string): Promise<number> {
-    let text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, 
+    let text = '';
+    let values = null;
+
+    if (banUserDTO.isBanned === true) {
+      text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, 
                 "banDate" = NOW(), "banReason" = $2 WHERE "id" = $3`;
-    let values = [banUserDTO.isBanned, banUserDTO.banReason, userID];
+      values = [banUserDTO.isBanned, banUserDTO.banReason, userID];
+    }
 
     if (banUserDTO.isBanned === false) {
       text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = false, 
               "banDate" = null, "banReason" = null WHERE "id" = $1`;
       values = [userID];
+    }
+
+    const result = await this.dataSource.query(text, values);
+
+    return result[1];
+  }
+
+  async bannedRawBlog(isBanned: boolean, blogID: string): Promise<number> {
+    let text = '';
+    let values = null;
+
+    if (isBanned === true) {
+      text = `UPDATE "${TablesNames.Blogs}" SET "blogIsBanned" = true, 
+                "banDate" = NOW() WHERE "id" = $1`;
+      values = [blogID];
+    }
+
+    if (isBanned === false) {
+      text = `UPDATE "${TablesNames.Blogs}" SET "blogIsBanned" = false, 
+                "banDate" = null WHERE "id" = $1`;
+      values = [blogID];
     }
 
     const result = await this.dataSource.query(text, values);
