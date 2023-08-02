@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
+  BlogsTableType,
   GetAllBlogsAdminType,
   GetAllBlogsType,
   GetAllUsersAdminType,
@@ -42,37 +43,51 @@ export class SuperAdminQueryRepository {
   async getAllBlogsToAdmin(
     queryAll: QueryBlogType,
   ): Promise<GetAllBlogsAdminType> {
-    const allBlogs: BlogModelType[] = await this.BlogModel.find({
-      name: new RegExp(queryAll.searchNameTerm, 'gi'),
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({
-        [queryAll.sortBy]: this.sortObject(queryAll.sortDirection),
-      });
+    const text1 = `SELECT * FROM "${TablesNames.Blogs}"
+                   WHERE "name" ILIKE '%${queryAll.searchNameTerm}%' 
+                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                   LIMIT $1 OFFSET $2`;
 
-    const allMapsBlogs: GetBlogAdminType[] = allBlogs.map((field) => {
-      return {
-        id: field.id,
-        name: field.name,
-        description: field.description,
-        websiteUrl: field.websiteUrl,
-        createdAt: field.createdAt,
-        isMembership: field.isMembership,
-        blogOwnerInfo: {
-          userId: field.blogOwnerInfo.userId,
-          userLogin: field.blogOwnerInfo.userLogin,
-        },
-        banInfo: {
-          isBanned: field.banInfo.isBanned,
-          banDate: field.banInfo.banDate,
-        },
-      };
-    });
+    const text2 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "name" 
+                   ILIKE '%${queryAll.searchNameTerm}%'`;
 
-    const allCount: number = await this.BlogModel.countDocuments({
-      name: new RegExp(queryAll.searchNameTerm, 'gi'),
-    });
+    const values = [
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
+
+    const rawAllBlogs: BlogsTableType[] = await this.dataSource.query(
+      text1,
+      values,
+    );
+
+    const rawAllBlogsCount: BlogsTableType[] = await this.dataSource.query(
+      text2,
+    );
+
+    const mappedAllBlogs: GetBlogAdminType[] = rawAllBlogs.map(
+      (field: BlogsTableType) => {
+        return {
+          id: field.id,
+          name: field.name,
+          description: field.description,
+          websiteUrl: field.websiteUrl,
+          createdAt: field.createdAt,
+          isMembership: field.isMembership,
+          blogOwnerInfo: {
+            userId: field.userOwnerId,
+            userLogin: field.userOwnerLogin,
+          },
+          banInfo: {
+            isBanned: field.blogIsBanned,
+            banDate: field.banDate,
+          },
+        };
+      },
+    );
+
+    const allCount: number = rawAllBlogsCount.length;
+
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
     return {
@@ -80,7 +95,7 @@ export class SuperAdminQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsBlogs,
+      items: mappedAllBlogs,
     };
   }
 

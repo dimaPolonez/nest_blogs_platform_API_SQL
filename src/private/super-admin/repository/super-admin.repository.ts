@@ -13,6 +13,7 @@ import {
 } from '../../../core/entity';
 import {
   BanUserType,
+  BlogsTableType,
   NewUserDTOType,
   TablesNames,
   UpdateArrayCommentsType,
@@ -93,27 +94,6 @@ export class SuperAdminRepository {
     return result[1];
   }
 
-  async banedBlog(isBanned: boolean, blogID: string) {
-    let banDate = null;
-    if (isBanned === true) {
-      banDate = new Date().toISOString();
-    }
-    await this.BlogModel.updateMany(
-      { _id: blogID },
-      {
-        $set: {
-          'banInfo.isBanned': isBanned,
-          'banInfo.banDate': banDate,
-        },
-      },
-    );
-
-    await this.PostModel.updateMany(
-      { blogId: blogID },
-      { $set: { blogIsBanned: isBanned } },
-    );
-  }
-
   async updateAllPostsIsBanned(isBanned: boolean, userID: string) {
     await this.PostModel.updateMany(
       { 'extendedLikesInfo.newestLikes.userId': userID },
@@ -171,15 +151,26 @@ export class SuperAdminRepository {
     return this.BlogModel.findById({ _id: blogID });
   }
 
-  async findUserById(userID: string): Promise<UserModelType | null> {
-    return this.UserModel.findById({ _id: userID });
-  }
-
   async findUserByIdSql(userID: string): Promise<UsersTableType[]> {
     const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
     const values = [userID];
 
     return await this.dataSource.query(text, values);
+  }
+
+  async findBlogByIdSql(blogID: string): Promise<BlogsTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Blogs}" WHERE "id" = $1`;
+    const values = [blogID];
+
+    return await this.dataSource.query(text, values);
+  }
+
+  async bindBlogToUser(blogID: string, userID: string, userLogin: string) {
+    const text = `UPDATE "${TablesNames.Blogs}" SET "userOwnerId" = $1, "userOwnerLogin" = $2 WHERE "id" = $3`;
+
+    const values = [userID, userLogin, blogID];
+
+    await this.dataSource.query(text, values);
   }
 
   async deleteUser(userID: string): Promise<number> {
@@ -212,10 +203,5 @@ export class SuperAdminRepository {
 
       this.dataSource.query(text);
     });
-
-    await this.BlogModel.deleteMany();
-    await this.PostModel.deleteMany();
-    await this.CommentModel.deleteMany();
-    await this.UserModel.deleteMany();
   }
 }
