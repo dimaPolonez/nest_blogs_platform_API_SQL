@@ -7,21 +7,26 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
   AllBanUsersInfoType,
+  BlogsTableType,
+  ExtendedLikesPostInfoType,
   GetAllBlogsType,
   GetAllCommentOfPostType,
   GetAllCommentsToBloggerType,
-  GetAllCommentsType,
+  GetAllPostsOfBlogType,
+  GetAllPostsToBloggerType,
   GetAllPostsType,
   getBanAllUserOfBlogType,
   GetBlogType,
-  GetCommentType,
+  GetPostToBloggerType,
   GetPostType,
-  MinimalBlog,
   MyLikeStatus,
+  NewestLikesToBloggerType,
   NewestLikesType,
+  PostsTableType,
   QueryBlogType,
   QueryCommentType,
   QueryPostType,
+  TablesNames,
 } from '../../../core/models';
 import {
   BlogModel,
@@ -135,22 +140,34 @@ export class BloggerQueryRepository {
     blogerId: string,
     queryAll: QueryBlogType,
   ): Promise<GetAllBlogsType> {
-    const allBlogs: BlogModelType[] = await this.BlogModel.find({
-      $and: [
-        {
-          'blogOwnerInfo.userId': blogerId,
-          'banInfo.isBanned': false,
-        },
-        { name: new RegExp(queryAll.searchNameTerm, 'gi') },
-      ],
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({
-        [queryAll.sortBy]: this.sortObject(queryAll.sortDirection),
-      });
+    const text1 = `SELECT * FROM "${TablesNames.Blogs}"
+                   WHERE "userOwnerId" = $1 AND "blogIsBanned" = false 
+                   AND ("name" ILIKE '%${queryAll.searchNameTerm}%')
+                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                   LIMIT $2 OFFSET $3`;
+    const values1 = [
+      blogerId,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-    const allMapsBlogs: GetBlogType[] = allBlogs.map((field) => {
+    const rawAllBlogs: BlogsTableType[] = await this.dataSource.query(
+      text1,
+      values1,
+    );
+
+    const text2 = `SELECT * FROM "${TablesNames.Blogs}"
+                   WHERE "userOwnerId" = $1 AND "blogIsBanned" = false 
+                   AND ("name" ILIKE '%${queryAll.searchNameTerm}%')`;
+
+    const values2 = [blogerId];
+
+    const rawAllBlogsCount: BlogsTableType[] = await this.dataSource.query(
+      text2,
+      values2,
+    );
+
+    const mappedAllBlogs: GetBlogType[] = rawAllBlogs.map((field) => {
       return {
         id: field.id,
         name: field.name,
@@ -161,15 +178,8 @@ export class BloggerQueryRepository {
       };
     });
 
-    const allCount: number = await this.BlogModel.countDocuments({
-      $and: [
-        {
-          'blogOwnerInfo.userId': blogerId,
-          'banInfo.isBanned': false,
-        },
-        { name: new RegExp(queryAll.searchNameTerm, 'gi') },
-      ],
-    });
+    const allCount: number = rawAllBlogsCount.length;
+
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
     return {
@@ -177,7 +187,7 @@ export class BloggerQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsBlogs,
+      items: mappedAllBlogs,
     };
   }
 
@@ -185,80 +195,141 @@ export class BloggerQueryRepository {
     userID: string,
     queryAll: QueryPostType,
     blogID: string,
-    params?: string,
-  ): Promise<GetAllPostsType> {
-    const findBlogSmart: BlogModelType | null = await this.BlogModel.findById(
-      blogID,
+  ) /*: Promise<GetAllPostsToBloggerType>*/ {
+    const text1 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "id" = $1`;
+
+    const values1 = [blogID];
+
+    const rawBlog: BlogsTableType[] = await this.dataSource.query(
+      text1,
+      values1,
     );
 
-    if (!findBlogSmart || findBlogSmart.banInfo.isBanned === true) {
-      throw new NotFoundException();
+    if (rawBlog.length < 1) {
+      throw new NotFoundException('blog not found');
     }
 
-    if (findBlogSmart.blogOwnerInfo.userId !== userID) {
+    if (rawBlog[0].userOwnerId !== userID) {
       throw new ForbiddenException('The user is not the owner of the blog');
     }
 
-    const allPosts: PostModelType[] = await this.PostModel.find({
-      blogId: blogID,
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({ [queryAll.sortBy]: this.sortObject(queryAll.sortDirection) });
+    const text2 = `SELECT Posts.*, Likes.*, Users."userIsBanned"
+                   FROM "${TablesNames.Posts}" AS Posts
+                   FULL JOIN "${TablesNames.ExtendedLikesPostInfo}" AS Likes
+                   ON Posts.id = Likes."postId"
+                   FULL JOIN "${TablesNames.Users}" AS Users
+                   ON Likes."userOwnerId" = Users.id
+                   WHERE Posts."blogId" = $1
+                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                   LIMIT $2 OFFSET $3`;
 
-    const allMapsPosts: GetPostType[] = allPosts.map((field) => {
-      let userStatus = MyLikeStatus.None;
+    const values2 = [
+      blogID,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-      const findUserLike: null | NewestLikesType =
-        field.extendedLikesInfo.newestLikes.find((v) => v.userId === userID);
+    const rawAllPosts = await this.dataSource.query(text2, values2);
 
-      if (findUserLike) {
-        userStatus = findUserLike.myStatus;
-      }
+    const text3 = `SELECT * FROM "${TablesNames.Posts}"
+                   WHERE "blogId" = $1`;
 
-      let newestLikesArray = [];
+    const values3 = [blogID];
 
-      if (field.extendedLikesInfo.newestLikes.length > 0) {
-        let newestLikes: NewestLikesType[] | [] =
-          field.extendedLikesInfo.newestLikes.filter(
-            (v) => v.myStatus === MyLikeStatus.Like && v.isBanned === false,
+    await this.dataSource.query(text3, values3);
+
+    /*const text2 = `SELECT * FROM "${TablesNames.Posts}"
+                   WHERE "blogId" = $1 
+                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                   LIMIT $2 OFFSET $3`;
+
+    const values2 = [
+      blogID,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
+
+    const rawAllPosts: PostsTableType[] = await this.dataSource.query(
+      text2,
+      values2,
+    );
+
+    const text3 = `SELECT * FROM "${TablesNames.Posts}"
+                   WHERE "blogId" = $1`;
+
+    const values3 = [blogID];
+
+    const rawAllPostsCount: PostsTableType[] = await this.dataSource.query(
+      text3,
+      values3,
+    );
+
+    const mappedAllPosts: Promise<GetPostToBloggerType>[] = rawAllPosts.map(
+      async (field) => {
+        let userStatus = MyLikeStatus.None;
+
+        const text4 = `SELECT likes.* 
+                     FROM "${TablesNames.ExtendedLikesPostInfo}" AS likes
+                     JOIN "${TablesNames.Users}" AS users 
+                     ON likes.userOwnerId = users.id
+                     WHERE likes.postId = $1 AND users.userIsBanned = false`;
+
+        const values4 = [field.id];
+
+        const likesArrayToPost: ExtendedLikesPostInfoType[] =
+          await this.dataSource.query(text4, values4);
+
+        let newestLikesArray: NewestLikesToBloggerType[] = [];
+
+        let likesCount = 0;
+        let dislikesCount = 0;
+
+        if (likesArrayToPost.length > 0) {
+          const findUserLike: ExtendedLikesPostInfoType = likesArrayToPost.find(
+            (v) => v.userOwnerId === userID,
           );
 
-        newestLikes.sort(function (a: NewestLikesType, b: NewestLikesType) {
-          return a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0;
-        });
+          if (findUserLike) {
+            userStatus = findUserLike.status;
+          }
+          newestLikesArray = likesArrayToPost
+            .map((v) => {
+              if (v.status === MyLikeStatus.Like) {
+                likesCount++;
+                return {
+                  addedAt: v.addedAt,
+                  userId: v.userOwnerId,
+                  login: v.userOwnerLogin,
+                };
+              }
+            })
+            .sort((a, b) =>
+              a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0,
+            )
+            .slice(0, 3);
 
-        newestLikes = newestLikes.slice(0, 3);
+          dislikesCount = likesArrayToPost.length - likesCount;
+        }
+        return {
+          id: field.id,
+          title: field.title,
+          shortDescription: field.shortDescription,
+          content: field.content,
+          blogId: field.blogId,
+          blogName: field.blogName,
+          createdAt: field.createdAt,
+          extendedLikesInfo: {
+            likesCount: likesCount,
+            dislikesCount: dislikesCount,
+            myStatus: userStatus,
+            newestLikes: newestLikesArray,
+          },
+        };
+      },
+    );
 
-        newestLikesArray = newestLikes.map((v: NewestLikesType) => {
-          return {
-            userId: v.userId,
-            login: v.login,
-            addedAt: v.addedAt,
-          };
-        });
-      }
+    const allCount: number = rawAllPostsCount.length;
 
-      return {
-        id: field.id,
-        title: field.title,
-        shortDescription: field.shortDescription,
-        content: field.content,
-        blogId: field.blogId,
-        blogName: field.blogName,
-        createdAt: field.createdAt,
-        extendedLikesInfo: {
-          likesCount: field.extendedLikesInfo.likesCount,
-          dislikesCount: field.extendedLikesInfo.dislikesCount,
-          myStatus: userStatus,
-          newestLikes: newestLikesArray,
-        },
-      };
-    });
-
-    const allCount: number = await this.PostModel.countDocuments({
-      blogId: blogID,
-    });
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
     return {
@@ -266,8 +337,8 @@ export class BloggerQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsPosts,
-    };
+      items: mappedAllPosts,
+    };*/
   }
   async getAllCommentsToBlogger(
     userID: string,

@@ -28,6 +28,7 @@ import {
   GetAllBlogsType,
   GetAllCommentsToBloggerType,
   GetAllPostsOfBlogType,
+  GetAllPostsToBloggerType,
   getBanAllUserOfBlogType,
   GetBlogType,
   GetPostOfBlogType,
@@ -133,7 +134,7 @@ export class BloggerController {
     @Request() req,
     @Param('id', new ParseUUIDPipe()) blogID: string,
     @Query() queryAll: QueryPostOfBlogDto,
-  ): Promise<GetAllPostsOfBlogType> {
+  ) /*: Promise<GetAllPostsToBloggerType>*/ {
     return await this.bloggerQueryRepository.getAllPostsOfBlogToBlogger(
       req.user.userID,
       queryAll,

@@ -76,6 +76,7 @@ export type BanAllUsersOfBlogInfoType = {
 export type ExtendedLikesPostInfoType = {
   id: string;
   userOwnerId: string;
+  userOwnerLogin: string;
   postId: string;
   status: MyLikeStatus;
   addedAt: string;
@@ -84,6 +85,7 @@ export type ExtendedLikesPostInfoType = {
 export type ExtendedLikesCommentInfoType = {
   id: string;
   userOwnerId: string;
+  userOwnerLogin: string;
   commentId: string;
   status: MyLikeStatus;
   addedAt: string;

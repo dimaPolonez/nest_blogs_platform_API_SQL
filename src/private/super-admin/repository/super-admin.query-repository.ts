@@ -48,9 +48,6 @@ export class SuperAdminQueryRepository {
                    ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
                    LIMIT $1 OFFSET $2`;
 
-    const text2 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "name" 
-                   ILIKE '%${queryAll.searchNameTerm}%'`;
-
     const values = [
       queryAll.pageSize,
       this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
@@ -60,6 +57,9 @@ export class SuperAdminQueryRepository {
       text1,
       values,
     );
+
+    const text2 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "name" 
+                   ILIKE '%${queryAll.searchNameTerm}%'`;
 
     const rawAllBlogsCount: BlogsTableType[] = await this.dataSource.query(
       text2,
@@ -109,7 +109,6 @@ export class SuperAdminQueryRepository {
         return ``;
     }
   }
-
   async getAllUsersAdmin(
     queryAll: QueryUsersAdminType,
   ): Promise<GetAllUsersAdminType> {
@@ -122,11 +121,6 @@ export class SuperAdminQueryRepository {
           ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
           LIMIT $1 OFFSET $2`;
 
-    const text2 = `SELECT * FROM "${TablesNames.Users}"
-          WHERE ${banStatusFilter}
-          ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
-          OR "email" ILIKE '%${queryAll.searchEmailTerm}%')`;
-
     const values = [
       queryAll.pageSize,
       this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
@@ -136,6 +130,11 @@ export class SuperAdminQueryRepository {
       text1,
       values,
     );
+
+    const text2 = `SELECT * FROM "${TablesNames.Users}"
+          WHERE ${banStatusFilter}
+          ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
+          OR "email" ILIKE '%${queryAll.searchEmailTerm}%')`;
 
     const rawAllUsersCount: UsersTableType[] = await this.dataSource.query(
       text2,
