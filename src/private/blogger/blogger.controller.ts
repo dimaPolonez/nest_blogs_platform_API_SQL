@@ -134,7 +134,7 @@ export class BloggerController {
     @Request() req,
     @Param('id', new ParseUUIDPipe()) blogID: string,
     @Query() queryAll: QueryPostOfBlogDto,
-  ) /*: Promise<GetAllPostsToBloggerType>*/ {
+  ): Promise<GetAllPostsToBloggerType> {
     return await this.bloggerQueryRepository.getAllPostsOfBlogToBlogger(
       req.user.userID,
       queryAll,

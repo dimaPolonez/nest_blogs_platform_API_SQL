@@ -67,7 +67,7 @@ export type GetAllPostsToBloggerType = {
   page: number;
   pageSize: number;
   totalCount: number;
-  items: Promise<GetPostToBloggerType>[];
+  items: GetPostToBloggerType[];
 };
 
 export type GetPostToBloggerType = {

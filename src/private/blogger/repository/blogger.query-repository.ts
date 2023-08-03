@@ -195,7 +195,7 @@ export class BloggerQueryRepository {
     userID: string,
     queryAll: QueryPostType,
     blogID: string,
-  ) /*: Promise<GetAllPostsToBloggerType>*/ {
+  ): Promise<GetAllPostsToBloggerType> {
     const text1 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "id" = $1`;
 
     const values1 = [blogID];
@@ -205,7 +205,7 @@ export class BloggerQueryRepository {
       values1,
     );
 
-    if (rawBlog.length < 1) {
+    if (rawBlog.length < 1 || rawBlog[0].blogIsBanned === true) {
       throw new NotFoundException('blog not found');
     }
 
@@ -213,35 +213,10 @@ export class BloggerQueryRepository {
       throw new ForbiddenException('The user is not the owner of the blog');
     }
 
-    const text2 = `SELECT Posts.*, Likes.*, Users."userIsBanned"
-                   FROM "${TablesNames.Posts}" AS Posts
-                   FULL JOIN "${TablesNames.ExtendedLikesPostInfo}" AS Likes
-                   ON Posts.id = Likes."postId"
-                   FULL JOIN "${TablesNames.Users}" AS Users
-                   ON Likes."userOwnerId" = Users.id
-                   WHERE Posts."blogId" = $1
-                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
-                   LIMIT $2 OFFSET $3`;
-
-    const values2 = [
-      blogID,
-      queryAll.pageSize,
-      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
-    ];
-
-    const rawAllPosts = await this.dataSource.query(text2, values2);
-
-    const text3 = `SELECT * FROM "${TablesNames.Posts}"
-                   WHERE "blogId" = $1`;
-
-    const values3 = [blogID];
-
-    await this.dataSource.query(text3, values3);
-
-    /*const text2 = `SELECT * FROM "${TablesNames.Posts}"
-                   WHERE "blogId" = $1 
-                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
-                   LIMIT $2 OFFSET $3`;
+    const text2 = `SELECT * FROM "${TablesNames.Posts}"
+                       WHERE "blogId" = $1 
+                       ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                       LIMIT $2 OFFSET $3`;
 
     const values2 = [
       blogID,
@@ -255,7 +230,7 @@ export class BloggerQueryRepository {
     );
 
     const text3 = `SELECT * FROM "${TablesNames.Posts}"
-                   WHERE "blogId" = $1`;
+                       WHERE "blogId" = $1`;
 
     const values3 = [blogID];
 
@@ -264,69 +239,27 @@ export class BloggerQueryRepository {
       values3,
     );
 
-    const mappedAllPosts: Promise<GetPostToBloggerType>[] = rawAllPosts.map(
-      async (field) => {
-        let userStatus = MyLikeStatus.None;
-
-        const text4 = `SELECT likes.* 
-                     FROM "${TablesNames.ExtendedLikesPostInfo}" AS likes
-                     JOIN "${TablesNames.Users}" AS users 
-                     ON likes.userOwnerId = users.id
-                     WHERE likes.postId = $1 AND users.userIsBanned = false`;
-
-        const values4 = [field.id];
-
-        const likesArrayToPost: ExtendedLikesPostInfoType[] =
-          await this.dataSource.query(text4, values4);
-
-        let newestLikesArray: NewestLikesToBloggerType[] = [];
-
-        let likesCount = 0;
-        let dislikesCount = 0;
-
-        if (likesArrayToPost.length > 0) {
-          const findUserLike: ExtendedLikesPostInfoType = likesArrayToPost.find(
-            (v) => v.userOwnerId === userID,
-          );
-
-          if (findUserLike) {
-            userStatus = findUserLike.status;
-          }
-          newestLikesArray = likesArrayToPost
-            .map((v) => {
-              if (v.status === MyLikeStatus.Like) {
-                likesCount++;
-                return {
-                  addedAt: v.addedAt,
-                  userId: v.userOwnerId,
-                  login: v.userOwnerLogin,
-                };
-              }
-            })
-            .sort((a, b) =>
-              a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0,
-            )
-            .slice(0, 3);
-
-          dislikesCount = likesArrayToPost.length - likesCount;
-        }
-        return {
-          id: field.id,
-          title: field.title,
-          shortDescription: field.shortDescription,
-          content: field.content,
-          blogId: field.blogId,
-          blogName: field.blogName,
-          createdAt: field.createdAt,
-          extendedLikesInfo: {
-            likesCount: likesCount,
-            dislikesCount: dislikesCount,
-            myStatus: userStatus,
-            newestLikes: newestLikesArray,
-          },
-        };
-      },
-    );
+    const mappedAllPosts: GetPostToBloggerType[] = rawAllPosts.map((field) => {
+      const userStatus = MyLikeStatus.None;
+      const newestLikesArray: NewestLikesToBloggerType[] = [];
+      const likesCount = 0;
+      const dislikesCount = 0;
+      return {
+        id: field.id,
+        title: field.title,
+        shortDescription: field.shortDescription,
+        content: field.content,
+        blogId: field.blogId,
+        blogName: field.blogName,
+        createdAt: field.createdAt,
+        extendedLikesInfo: {
+          likesCount: likesCount,
+          dislikesCount: dislikesCount,
+          myStatus: userStatus,
+          newestLikes: newestLikesArray,
+        },
+      };
+    });
 
     const allCount: number = rawAllPostsCount.length;
 
@@ -338,7 +271,92 @@ export class BloggerQueryRepository {
       pageSize: queryAll.pageSize,
       totalCount: allCount,
       items: mappedAllPosts,
-    };*/
+    };
+
+    /*
+        const text2 = `SELECT Posts.*, Likes.*, Users."userIsBanned"
+                       FROM "${TablesNames.Posts}" AS Posts
+                       FULL JOIN "${TablesNames.ExtendedLikesPostInfo}" AS Likes
+                       ON Posts.id = Likes."postId"
+                       FULL JOIN "${TablesNames.Users}" AS Users
+                       ON Likes."userOwnerId" = Users.id
+                       WHERE Posts."blogId" = $1
+                       ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                       LIMIT $2 OFFSET $3`;
+
+        const values2 = [
+          blogID,
+          queryAll.pageSize,
+          this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+        ];
+
+        const rawAllPosts = await this.dataSource.query(text2, values2);
+
+        const mappedAllPosts: Promise<GetPostToBloggerType>[] = rawAllPosts.map(
+          async (field) => {
+            let userStatus = MyLikeStatus.None;
+
+            const text4 = `SELECT likes.*
+                         FROM "${TablesNames.ExtendedLikesPostInfo}" AS likes
+                         JOIN "${TablesNames.Users}" AS users
+                         ON likes.userOwnerId = users.id
+                         WHERE likes.postId = $1 AND users.userIsBanned = false`;
+
+            const values4 = [field.id];
+
+            const likesArrayToPost: ExtendedLikesPostInfoType[] =
+              await this.dataSource.query(text4, values4);
+
+            let newestLikesArray: NewestLikesToBloggerType[] = [];
+
+            let likesCount = 0;
+            let dislikesCount = 0;
+
+            if (likesArrayToPost.length > 0) {
+              const findUserLike: ExtendedLikesPostInfoType = likesArrayToPost.find(
+                (v) => v.userOwnerId === userID,
+              );
+
+              if (findUserLike) {
+                userStatus = findUserLike.status;
+              }
+              newestLikesArray = likesArrayToPost
+                .map((v) => {
+                  if (v.status === MyLikeStatus.Like) {
+                    likesCount++;
+                    return {
+                      addedAt: v.addedAt,
+                      userId: v.userOwnerId,
+                      login: v.userOwnerLogin,
+                    };
+                  }
+                })
+                .sort((a, b) =>
+                  a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0,
+                )
+                .slice(0, 3);
+
+              dislikesCount = likesArrayToPost.length - likesCount;
+            }
+            return {
+              id: field.id,
+              title: field.title,
+              shortDescription: field.shortDescription,
+              content: field.content,
+              blogId: field.blogId,
+              blogName: field.blogName,
+              createdAt: field.createdAt,
+              extendedLikesInfo: {
+                likesCount: likesCount,
+                dislikesCount: dislikesCount,
+                myStatus: userStatus,
+                newestLikes: newestLikesArray,
+              },
+            };
+          },
+        );
+
+        */
   }
   async getAllCommentsToBlogger(
     userID: string,
