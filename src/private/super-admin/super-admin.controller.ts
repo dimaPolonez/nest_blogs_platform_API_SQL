@@ -67,6 +67,7 @@ export class SuperAdminController {
   async getAllBlogsToAdmin(
     @Query() queryAll: QueryBlogsDto,
   ): Promise<GetAllBlogsAdminType> {
+    console.log({ qAll: queryAll });
     return await this.superAdminQueryRepository.getAllBlogsToAdmin(queryAll);
   }
 

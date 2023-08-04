@@ -490,7 +490,9 @@ export class BloggerQueryRepository {
     const text2 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
                    WHERE "blogId" = $1 AND 
                    "userLogin" ILIKE '%${queryAll.searchNameTerm}%'
-                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                   ORDER BY "${
+                     queryAll.sortBy === 'login' ? 'userLogin' : 'createdAt'
+                   }" ${queryAll.sortDirection}
                    LIMIT $2 OFFSET $3`;
 
     const values2 = [
@@ -514,7 +516,7 @@ export class BloggerQueryRepository {
     const paginationBanUserArray: AllBanUsersInfoType[] =
       rawAllBannedUserToBlog.map((field) => {
         return {
-          id: field.id,
+          id: field.userId,
           login: field.userLogin,
           banInfo: {
             isBanned: true,
