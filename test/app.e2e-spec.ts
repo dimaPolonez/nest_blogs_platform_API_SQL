@@ -4,6 +4,7 @@ import { postFlow } from './postFlow';
 import { commentFlow } from './commentFlow';
 import { likeFlow } from './likeFlow';
 import { banFlow } from './banFlow';
+import { banUserToBlogFlow } from './banUserToBlogFlow';
 
 export type TestObjectType = {
   basic: string;
@@ -16,6 +17,7 @@ export type TestObjectType = {
 describe('AppController (e2e)', () => {
   jest.setTimeout(30000);
   const testObject: TestObjectType = startFlow();
+  banUserToBlogFlow(testObject);
   //banFlow(testObject);
   //blogFlow(testObject);
   //postFlow(testObject);

@@ -488,8 +488,8 @@ export class BloggerQueryRepository {
     }
 
     const text2 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
-                   WHERE "blogId" = $1
-                   AND ("userLogin" ILIKE '%${queryAll.searchNameTerm}%')
+                   WHERE "blogId" = $1 AND 
+                   "userLogin" ILIKE '%${queryAll.searchNameTerm}%'
                    ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
                    LIMIT $2 OFFSET $3`;
 
@@ -503,8 +503,8 @@ export class BloggerQueryRepository {
       await this.dataSource.query(text2, values2);
 
     const text3 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
-                   WHERE "blogId" = $1
-                   AND ("userLogin" ILIKE '%${queryAll.searchNameTerm}%')`;
+                   WHERE "blogId" = $1 AND 
+                   "userLogin" ILIKE '%${queryAll.searchNameTerm}%'`;
 
     const values3 = [blogID];
 

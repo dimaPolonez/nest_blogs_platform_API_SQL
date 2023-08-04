@@ -117,8 +117,7 @@ export class PostsQueryRepository {
     const text2 = `SELECT Posts.*, Blogs."blogIsBanned" 
                    FROM "${TablesNames.Posts}" AS Posts
                    FULL JOIN "${TablesNames.Blogs}" AS Blogs
-                   ON Posts."blogId" = Blogs.id
-                   `;
+                   ON Posts."blogId" = Blogs.id`;
 
     const rawAllPosts = await this.dataSource.query(text2);
 
