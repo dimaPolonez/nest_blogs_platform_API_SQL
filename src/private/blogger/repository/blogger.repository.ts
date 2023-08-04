@@ -10,6 +10,7 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import {
+  BanUserOfBlogType,
   BlogsTableType,
   CreateBlogType,
   CreatePostOfBlogType,
@@ -55,6 +56,14 @@ export class BloggerRepository {
     return await this.dataSource.query(text, values);
   }
 
+  async findRawUser(userID: string) {
+    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
+
+    const values = [userID];
+
+    return await this.dataSource.query(text, values);
+  }
+
   async updateRawBlog(blogID: string, blogDTO: UpdateBlogType) {
     const text = `UPDATE "${TablesNames.Blogs}" SET "name" = $1,
                   "description" = $2, "websiteUrl" = $3 WHERE "id" = $4`;
@@ -65,6 +74,33 @@ export class BloggerRepository {
       blogDTO.websiteUrl,
       blogID,
     ];
+
+    await this.dataSource.query(text, values);
+  }
+
+  async addBanUserToBlog(
+    banUserOfBlogDTO: BanUserOfBlogType,
+    userID: string,
+    userLogin: string,
+  ) {
+    const text = `INSERT INTO "${TablesNames.BanAllUsersOfBlogInfo}"
+                    ("blogId", "userId","userLogin","banReason") 
+                    VALUES($1, $2, $3, $4)`;
+    const values = [
+      banUserOfBlogDTO.blogId,
+      userID,
+      userLogin,
+      banUserOfBlogDTO.banReason,
+    ];
+
+    await this.dataSource.query(text, values);
+  }
+
+  async deleteBanUserToBlog(blogID: string, userID: string) {
+    const text = `DELETE FROM "${TablesNames.BanAllUsersOfBlogInfo}" 
+                  WHERE "blogId" = $1 AND "userId" = $2`;
+
+    const values = [blogID, userID];
 
     await this.dataSource.query(text, values);
   }

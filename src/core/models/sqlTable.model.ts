@@ -69,6 +69,7 @@ export type BanAllUsersOfBlogInfoType = {
   id: string;
   blogId: string;
   userId: string;
+  userLogin: string;
   banDate: string;
   banReason: string;
 };

@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
   AllBanUsersInfoType,
+  BanAllUsersOfBlogInfoType,
   BlogsTableType,
   ExtendedLikesPostInfoType,
   GetAllBlogsType,
@@ -469,47 +470,61 @@ export class BloggerQueryRepository {
     blogID: string,
     queryAll: QueryBlogType,
   ): Promise<getBanAllUserOfBlogType> {
-    const findBlogSmart: BlogModelType | null = await this.BlogModel.findById(
+    const text1 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "id" = $1`;
+
+    const values1 = [blogID];
+
+    const rawBlog: BlogsTableType[] = await this.dataSource.query(
+      text1,
+      values1,
+    );
+
+    if (rawBlog.length < 1 || rawBlog[0].blogIsBanned === true) {
+      throw new NotFoundException('blog not found');
+    }
+
+    if (rawBlog[0].userOwnerId !== userToken) {
+      throw new ForbiddenException('The user is not the owner of the blog');
+    }
+
+    const text2 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
+                   WHERE "blogId" = $1
+                   AND ("login" ILIKE '%${queryAll.searchNameTerm}%')
+                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                   LIMIT $2 OFFSET $3`;
+
+    const values2 = [
       blogID,
-    );
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-    if (!findBlogSmart) {
-      throw new NotFoundException();
-    }
+    const rawAllBannedUserToBlog: BanAllUsersOfBlogInfoType[] =
+      await this.dataSource.query(text2, values2);
 
-    if (findBlogSmart.blogOwnerInfo.userId !== userToken) {
-      throw new ForbiddenException();
-    }
+    const text3 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
+                   WHERE "blogId" = $1
+                   AND ("login" ILIKE '%${queryAll.searchNameTerm}%')`;
 
-    const banUserArraySearhLogin = findBlogSmart.banAllUsersInfo.filter(
-      (v) =>
-        new RegExp(queryAll.searchNameTerm, 'gi').test(v.login) &&
-        v.banInfo.isBanned === true,
-    );
+    const values3 = [blogID];
 
-    const skip = this.skippedObject(queryAll.pageNumber, queryAll.pageSize);
-    const limit = queryAll.pageSize;
-    const sortBy = queryAll.sortBy;
-    const sortDirections = queryAll.sortDirection;
+    const rawAllUsersBannedCount: BanAllUsersOfBlogInfoType[] =
+      await this.dataSource.query(text3, values3);
 
-    banUserArraySearhLogin.sort(
-      (a: AllBanUsersInfoType, b: AllBanUsersInfoType) => {
-        if (a[sortBy] < b[sortBy]) {
-          return sortDirections === 'asc' ? -1 : 1;
-        }
-        if (a[sortBy] > b[sortBy]) {
-          return sortDirections === 'asc' ? 1 : -1;
-        }
-        return 0;
-      },
-    );
+    const paginationBanUserArray: AllBanUsersInfoType[] =
+      rawAllBannedUserToBlog.map((field) => {
+        return {
+          id: field.id,
+          login: field.userLogin,
+          banInfo: {
+            isBanned: true,
+            banDate: field.banDate,
+            banReason: field.banReason,
+          },
+        };
+      });
 
-    const paginationBanUserArray = banUserArraySearhLogin.slice(
-      skip,
-      skip + limit,
-    );
-
-    const allCount: number = banUserArraySearhLogin.length;
+    const allCount: number = rawAllUsersBannedCount.length;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
