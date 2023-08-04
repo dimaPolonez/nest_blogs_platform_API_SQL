@@ -72,6 +72,7 @@ export type BanAllUsersOfBlogInfoType = {
   userLogin: string;
   banDate: string;
   banReason: string;
+  createdAt: string;
 };
 
 export type ExtendedLikesPostInfoType = {

@@ -489,7 +489,7 @@ export class BloggerQueryRepository {
 
     const text2 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
                    WHERE "blogId" = $1
-                   AND ("login" ILIKE '%${queryAll.searchNameTerm}%')
+                   AND ("userLogin" ILIKE '%${queryAll.searchNameTerm}%')
                    ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
                    LIMIT $2 OFFSET $3`;
 
@@ -504,7 +504,7 @@ export class BloggerQueryRepository {
 
     const text3 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
                    WHERE "blogId" = $1
-                   AND ("login" ILIKE '%${queryAll.searchNameTerm}%')`;
+                   AND ("userLogin" ILIKE '%${queryAll.searchNameTerm}%')`;
 
     const values3 = [blogID];
 
