@@ -52,7 +52,7 @@ export class PostsQueryRepository {
 
     const rawPost = await this.dataSource.query(text, values);
 
-    if (rawPost.length < 1 || rawPost.blogIsBanned === true) {
+    if (rawPost.length < 1 || rawPost[0].blogIsBanned === true) {
       throw new NotFoundException('post not found');
     }
 
