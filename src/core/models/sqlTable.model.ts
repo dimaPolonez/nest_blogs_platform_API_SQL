@@ -51,6 +51,7 @@ export type PostsTableType = {
 export type CommentsTableType = {
   id: string;
   userOwnerId: string;
+  userOwnerLogin: string;
   postId: string;
   content: string;
   createdAt: string;

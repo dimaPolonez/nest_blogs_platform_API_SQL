@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Query,
   Request,
   UseGuards,
@@ -38,7 +39,7 @@ export class BlogsController {
   @HttpCode(HttpStatus.OK)
   async getAllPostsOfBlog(
     @Request() req,
-    @Param('id') blogID: string,
+    @Param('id', new ParseUUIDPipe()) blogID: string,
     @Query() queryAll: QueryPostOfBlogDto,
   ): Promise<GetAllPostsOfBlogType> {
     return await this.postQueryRepository.getAllPosts(
@@ -50,7 +51,9 @@ export class BlogsController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  async getOneBlog(@Param('id') blogID: string): Promise<GetBlogType> {
+  async getOneBlog(
+    @Param('id', new ParseUUIDPipe()) blogID: string,
+  ): Promise<GetBlogType> {
     return await this.blogQueryRepository.findBlogById(blogID);
   }
 }

@@ -9,6 +9,8 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import {
+  BanAllUsersOfBlogInfoType,
+  CommentsTableType,
   ExtendedLikesPostInfoType,
   MyLikeStatus,
   PostsTableType,
@@ -41,6 +43,21 @@ export class PostsRepository {
                   WHERE "id" = $1`;
 
     const values = [postID];
+
+    return await this.dataSource.query(text, values);
+  }
+
+  async addNewCommentToPost(
+    userID: string,
+    login: string,
+    postID: string,
+    content: string,
+  ): Promise<CommentsTableType[]> {
+    const text = `INSERT INTO "${TablesNames.Comments}"
+                  ("userOwnerId", "userOwnerLogin","postId", "content") 
+                  VALUES($1, $2, $3, $4)`;
+
+    const values = [userID, login, postID, content];
 
     return await this.dataSource.query(text, values);
   }
@@ -80,6 +97,18 @@ export class PostsRepository {
     const values = [likeStatus, userID, postID];
 
     await this.dataSource.query(text, values);
+  }
+
+  async checkedBanUserToBlog(
+    userID: string,
+    blogID: string,
+  ): Promise<BanAllUsersOfBlogInfoType[]> {
+    const text = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}" 
+                  WHERE "blogId" = $1 AND "userId" = $2`;
+
+    const values = [userID, blogID];
+
+    return await this.dataSource.query(text, values);
   }
 
   async findPostById(postID: string): Promise<PostModelType | null> {

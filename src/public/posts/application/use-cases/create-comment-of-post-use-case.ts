@@ -1,20 +1,14 @@
 import {
+  BanAllUsersOfBlogInfoType,
+  CommentsTableType,
   CreateCommentOfPostType,
   GetCommentOfPostType,
-  NewCommentObjectType,
+  MyLikeStatus,
+  PostsTableType,
 } from '../../../../core/models';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { PostsRepository } from '../../repository/posts.repository';
-import {
-  CommentModel,
-  CommentModelType,
-  PostModelType,
-} from '../../../../core/entity';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { PostsQueryRepository } from '../../repository/posts.query-repository';
-import { AuthService } from '../../../../auth/application/auth.service';
 
 export class CreateCommentOfPostCommand {
   constructor(
@@ -29,51 +23,55 @@ export class CreateCommentOfPostCommand {
 export class CreateCommentOfPostUseCase
   implements ICommandHandler<CreateCommentOfPostCommand>
 {
-  constructor(
-    @InjectModel(CommentModel.name)
-    private readonly CommentModel: Model<CommentModelType>,
-    protected postRepository: PostsRepository,
-    protected postQueryRepository: PostsQueryRepository,
-    protected authService: AuthService,
-  ) {}
+  constructor(protected postRepository: PostsRepository) {}
 
   async execute(
     command: CreateCommentOfPostCommand,
   ): Promise<GetCommentOfPostType> {
     const { postID, commentDTO, userID, login } = command;
 
-    const findPost: PostModelType = await this.postRepository.findPostById(
+    const rawPost: PostsTableType[] = await this.postRepository.findRawPostById(
       postID,
     );
 
-    if (!findPost) {
+    if (rawPost.length < 1) {
       throw new NotFoundException('post not found');
     }
 
-    const userBlockedToBlog: boolean = await this.authService.userBlockedToBlog(
-      userID,
-      findPost.blogId,
-    );
+    const userBlockedToBlog: BanAllUsersOfBlogInfoType[] =
+      await this.postRepository.checkedBanUserToBlog(userID, rawPost[0].blogId);
 
-    if (userBlockedToBlog) {
+    if (userBlockedToBlog.length > 0) {
       throw new ForbiddenException();
     }
 
-    const newCommentDTO: NewCommentObjectType = {
-      content: commentDTO.content,
-      commentatorInfo: {
-        userId: userID,
-        userLogin: login,
-      },
-      postId: postID,
-    };
+    const rawNewComment: CommentsTableType[] =
+      await this.postRepository.addNewCommentToPost(
+        userID,
+        login,
+        postID,
+        commentDTO.content,
+      );
 
-    const createCommentSmart: CommentModelType = await new this.CommentModel(
-      newCommentDTO,
+    const mappedRawNewComment: GetCommentOfPostType[] = rawNewComment.map(
+      (field) => {
+        return {
+          id: field.id,
+          content: field.content,
+          commentatorInfo: {
+            userId: field.userOwnerId,
+            userLogin: field.userOwnerLogin,
+          },
+          createdAt: field.createdAt,
+          likesInfo: {
+            likesCount: 0,
+            dislikesCount: 0,
+            myStatus: MyLikeStatus.None,
+          },
+        };
+      },
     );
 
-    await this.postRepository.save(createCommentSmart);
-
-    return this.postQueryRepository.getCommentOfPost(createCommentSmart.id);
+    return mappedRawNewComment[0];
   }
 }
