@@ -55,7 +55,7 @@ export class PostsRepository {
   ): Promise<CommentsTableType[]> {
     const text = `INSERT INTO "${TablesNames.Comments}"
                   ("userOwnerId", "userOwnerLogin","postId", "content") 
-                  VALUES($1, $2, $3, $4)`;
+                  VALUES($1, $2, $3, $4) RETURNING *`;
 
     const values = [userID, login, postID, content];
 

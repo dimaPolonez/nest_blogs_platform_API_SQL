@@ -1,57 +1,71 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import {
   GetCommentType,
   MyLikeStatus,
-  NewestLikesType,
+  TablesNames,
 } from '../../../core/models';
-import { CommentModel, CommentModelType } from '../../../core/entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CommentsQueryRepository {
   constructor(
-    @InjectModel(CommentModel.name)
-    private readonly CommentModel: Model<CommentModelType>,
+    @InjectDataSource()
+    protected dataSource: DataSource,
   ) {}
 
   async findCommentById(
     commentID: string,
     userID?: string,
   ): Promise<GetCommentType> {
-    const findCommentSmart: CommentModelType = await this.CommentModel.findById(
-      commentID,
-    );
+    const text = `SELECT comment.*
+                  FROM "${TablesNames.Comments}" AS comment
+                  FULL JOIN "${TablesNames.Users}" AS user_owner
+                  ON comment."userOwnerId" = user_owner.id
+                  WHERE comment.id = $1 AND user_owner."userIsBanned" = false`;
 
-    if (
-      !findCommentSmart ||
-      findCommentSmart.commentatorInfo.isBanned === true
-    ) {
+    const values = [commentID];
+
+    const rawComment = await this.dataSource.query(text, values);
+
+    if (rawComment.length < 1 || rawComment[0].userIsBanned === true) {
       throw new NotFoundException('comment not found');
     }
 
     let userStatus = MyLikeStatus.None;
 
+    const text1 = `SELECT like_comment.*,
+                  COUNT(CASE WHEN like_comment.status = 'Like' THEN 1 END) AS likesCount, 
+                  COUNT(CASE WHEN like_comment.status = 'Dislike' THEN 1 END) AS dislikesCount
+                  FROM "${TablesNames.ExtendedLikesCommentInfo}" AS like_comment
+                  JOIN "${TablesNames.Users}" AS user_owner
+                  ON like_comment."userOwnerId" = user_owner.id
+                  WHERE like_comment."commentId" = $1 AND user_owner."userIsBanned" = false
+                  GROUP BY like_comment.id, like_comment."userOwnerId", like_comment."status" `;
+
+    const values1 = [commentID];
+
+    const commentLikes = await this.dataSource.query(text1, values1);
+
     if (userID !== 'quest') {
-      const findUserLike: null | NewestLikesType =
-        findCommentSmart.likesInfo.newestLikes.find((l) => l.userId === userID);
+      const findUserLike = commentLikes.find((l) => l.userOwnerId === userID);
 
       if (findUserLike) {
-        userStatus = findUserLike.myStatus;
+        userStatus = findUserLike.status;
       }
     }
 
     return {
-      id: findCommentSmart.id,
-      content: findCommentSmart.content,
+      id: rawComment[0].id,
+      content: rawComment[0].content,
       commentatorInfo: {
-        userId: findCommentSmart.commentatorInfo.userId,
-        userLogin: findCommentSmart.commentatorInfo.userLogin,
+        userId: rawComment[0].userOwnerId,
+        userLogin: rawComment[0].userOwnerLogin,
       },
-      createdAt: findCommentSmart.createdAt,
+      createdAt: rawComment[0].createdAt,
       likesInfo: {
-        likesCount: findCommentSmart.likesInfo.likesCount,
-        dislikesCount: findCommentSmart.likesInfo.dislikesCount,
+        likesCount: commentLikes[0].likescount,
+        dislikesCount: commentLikes[0].dislikescount,
         myStatus: userStatus,
       },
     };
