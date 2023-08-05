@@ -24,6 +24,7 @@ import {
   ConfirmEmailUseCase,
   CreateNewPasswordUseCase,
   CreateTokensUseCase,
+  DeleteAllSessionsUseCase,
   DeleteOneSessionUseCase,
   EmailResendingUseCase,
   GetAllSessionUseCase,
@@ -34,7 +35,6 @@ import {
   UpdateTokensUseCase,
 } from './application/use-cases';
 import { CqrsModule } from '@nestjs/cqrs';
-import { DeleteAllSessionsUseCase } from './application/use-cases/delete-all-sessions-use-case';
 
 const modules = [CqrsModule, PassportModule, JwtModule];
 

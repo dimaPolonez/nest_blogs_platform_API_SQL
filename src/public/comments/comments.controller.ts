@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Put,
   Request,
   UseGuards,
@@ -39,7 +40,7 @@ export class CommentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async likeStatusComment(
     @Request() req,
-    @Param('id') commentID: string,
+    @Param('id', new ParseUUIDPipe()) commentID: string,
     @Body() bodyLikeStatus: UpdateLikeStatusCommentDto,
   ) {
     await this.commandBus.execute(
@@ -57,7 +58,7 @@ export class CommentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async updateComment(
     @Request() req,
-    @Param('id') commentID: string,
+    @Param('id', new ParseUUIDPipe()) commentID: string,
     @Body() commentDTO: UpdateCommentDto,
   ) {
     await this.commandBus.execute(
@@ -68,7 +69,10 @@ export class CommentsController {
   @UseGuards(JwtAccessGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteComment(@Request() req, @Param('id') commentID: string) {
+  async deleteComment(
+    @Request() req,
+    @Param('id', new ParseUUIDPipe()) commentID: string,
+  ) {
     await this.commandBus.execute(
       new DeleteCommentCommand(req.user.userID, commentID),
     );
@@ -79,7 +83,7 @@ export class CommentsController {
   @HttpCode(HttpStatus.OK)
   async getOneComment(
     @Request() req,
-    @Param('id') commentID: string,
+    @Param('id', new ParseUUIDPipe()) commentID: string,
   ): Promise<GetCommentType> {
     return await this.commentQueryRepository.findCommentById(
       commentID,

@@ -13,6 +13,7 @@ import {
 } from '../../../core/entity';
 import {
   BanUserType,
+  BlogsTableType,
   NewUserDTOType,
   TablesNames,
   UpdateArrayCommentsType,
@@ -52,9 +53,14 @@ export class SuperAdminRepository {
     return await this.dataSource.query(text, values);
   }
   async banedUser(banUserDTO: BanUserType, userID: string): Promise<number> {
-    let text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, 
+    let text = '';
+    let values = null;
+
+    if (banUserDTO.isBanned === true) {
+      text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = $1, 
                 "banDate" = NOW(), "banReason" = $2 WHERE "id" = $3`;
-    let values = [banUserDTO.isBanned, banUserDTO.banReason, userID];
+      values = [banUserDTO.isBanned, banUserDTO.banReason, userID];
+    }
 
     if (banUserDTO.isBanned === false) {
       text = `UPDATE "${TablesNames.Users}" SET "userIsBanned" = false, 
@@ -67,25 +73,25 @@ export class SuperAdminRepository {
     return result[1];
   }
 
-  async banedBlog(isBanned: boolean, blogID: string) {
-    let banDate = null;
-    if (isBanned === true) {
-      banDate = new Date().toISOString();
-    }
-    await this.BlogModel.updateMany(
-      { _id: blogID },
-      {
-        $set: {
-          'banInfo.isBanned': isBanned,
-          'banInfo.banDate': banDate,
-        },
-      },
-    );
+  async bannedRawBlog(isBanned: boolean, blogID: string): Promise<number> {
+    let text = '';
+    let values = null;
 
-    await this.PostModel.updateMany(
-      { blogId: blogID },
-      { $set: { blogIsBanned: isBanned } },
-    );
+    if (isBanned === true) {
+      text = `UPDATE "${TablesNames.Blogs}" SET "blogIsBanned" = true, 
+                "banDate" = NOW() WHERE "id" = $1`;
+      values = [blogID];
+    }
+
+    if (isBanned === false) {
+      text = `UPDATE "${TablesNames.Blogs}" SET "blogIsBanned" = false, 
+                "banDate" = null WHERE "id" = $1`;
+      values = [blogID];
+    }
+
+    const result = await this.dataSource.query(text, values);
+
+    return result[1];
   }
 
   async updateAllPostsIsBanned(isBanned: boolean, userID: string) {
@@ -145,15 +151,26 @@ export class SuperAdminRepository {
     return this.BlogModel.findById({ _id: blogID });
   }
 
-  async findUserById(userID: string): Promise<UserModelType | null> {
-    return this.UserModel.findById({ _id: userID });
-  }
-
   async findUserByIdSql(userID: string): Promise<UsersTableType[]> {
     const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
     const values = [userID];
 
     return await this.dataSource.query(text, values);
+  }
+
+  async findBlogByIdSql(blogID: string): Promise<BlogsTableType[]> {
+    const text = `SELECT * FROM "${TablesNames.Blogs}" WHERE "id" = $1`;
+    const values = [blogID];
+
+    return await this.dataSource.query(text, values);
+  }
+
+  async bindBlogToUser(blogID: string, userID: string, userLogin: string) {
+    const text = `UPDATE "${TablesNames.Blogs}" SET "userOwnerId" = $1, "userOwnerLogin" = $2 WHERE "id" = $3`;
+
+    const values = [userID, userLogin, blogID];
+
+    await this.dataSource.query(text, values);
   }
 
   async deleteUser(userID: string): Promise<number> {
@@ -186,10 +203,5 @@ export class SuperAdminRepository {
 
       this.dataSource.query(text);
     });
-
-    await this.BlogModel.deleteMany();
-    await this.PostModel.deleteMany();
-    await this.CommentModel.deleteMany();
-    await this.UserModel.deleteMany();
   }
 }

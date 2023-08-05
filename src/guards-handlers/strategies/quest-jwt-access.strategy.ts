@@ -3,7 +3,6 @@ import { Strategy } from 'passport-jwt';
 import { CONFIG } from '../../config/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { questAccessHelper } from '../request-handlers';
-import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../../auth/application/auth.service';
 
 @Injectable()

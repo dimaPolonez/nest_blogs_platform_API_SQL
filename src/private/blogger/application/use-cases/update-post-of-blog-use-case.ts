@@ -1,14 +1,7 @@
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { UpdatePostOfBlogType } from '../../../../core/models';
+import { BlogsTableType, UpdatePostOfBlogType } from '../../../../core/models';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BloggerRepository } from '../../repository/blogger.repository';
-import {
-  BlogModelType,
-  PostModel,
-  PostModelType,
-} from '../../../../core/entity';
 
 export class UpdatePostOfBlogToBloggerCommand {
   constructor(
@@ -23,37 +16,28 @@ export class UpdatePostOfBlogToBloggerCommand {
 export class UpdatePostOfBlogToBloggerUseCase
   implements ICommandHandler<UpdatePostOfBlogToBloggerCommand>
 {
-  constructor(
-    protected bloggerRepository: BloggerRepository,
-    @InjectModel(PostModel.name)
-    private readonly PostModel: Model<PostModelType>,
-  ) {}
+  constructor(protected bloggerRepository: BloggerRepository) {}
 
   async execute(command: UpdatePostOfBlogToBloggerCommand) {
     const { bloggerId, blogID, postID, postDTO } = command;
 
-    const findBlog: BlogModelType | null =
-      await this.bloggerRepository.findBlogById(blogID);
+    const rawBlog: BlogsTableType[] = await this.bloggerRepository.findRawBlog(
+      blogID,
+    );
 
-    if (!findBlog) {
+    if (rawBlog.length < 1) {
       throw new NotFoundException('blog not found');
     }
 
-    if (findBlog.blogOwnerInfo.userId !== bloggerId) {
+    if (rawBlog[0].userOwnerId !== bloggerId) {
       throw new ForbiddenException('The user is not the owner of the blog');
     }
 
-    const findPost: PostModelType | null =
-      await this.bloggerRepository.findPostById(postID);
+    const resultUpdate: number =
+      await this.bloggerRepository.updateRawPostOfBlog(postID, postDTO);
 
-    if (!findPost) {
-      throw new NotFoundException('post not found');
+    if (!resultUpdate) {
+      throw new NotFoundException();
     }
-
-    const newPostDTO = { ...postDTO, blogId: blogID, blogName: findBlog.name };
-
-    await findPost.updatePost(newPostDTO);
-
-    await this.bloggerRepository.save(findPost);
   }
 }

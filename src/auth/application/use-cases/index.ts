@@ -9,3 +9,4 @@ export * from './logout-use-case';
 export * from './get-user-inf-use-case';
 export * from './get-all-session-use-case';
 export * from './delete-one-session-use-case';
+export * from './delete-all-sessions-use-case';

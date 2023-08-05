@@ -1,6 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { SuperAdminRepository } from '../../repository/super-admin.repository';
 import { BanBlogType } from '../../../../core/models';
+import { NotFoundException } from '@nestjs/common';
 
 export class BanBlogCommand {
   constructor(
@@ -16,6 +17,13 @@ export class BanBlogUseCase implements ICommandHandler<BanBlogCommand> {
   async execute(command: BanBlogCommand) {
     const { banBlogDTO, blogID } = command;
 
-    await this.superAdminRepository.banedBlog(banBlogDTO.isBanned, blogID);
+    const resultBan: number = await this.superAdminRepository.bannedRawBlog(
+      banBlogDTO.isBanned,
+      blogID,
+    );
+
+    if (!resultBan) {
+      throw new NotFoundException();
+    }
   }
 }

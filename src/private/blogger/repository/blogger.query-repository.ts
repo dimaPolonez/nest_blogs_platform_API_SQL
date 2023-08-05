@@ -7,21 +7,27 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
   AllBanUsersInfoType,
+  BanAllUsersOfBlogInfoType,
+  BlogsTableType,
+  ExtendedLikesPostInfoType,
   GetAllBlogsType,
   GetAllCommentOfPostType,
   GetAllCommentsToBloggerType,
-  GetAllCommentsType,
+  GetAllPostsOfBlogType,
+  GetAllPostsToBloggerType,
   GetAllPostsType,
   getBanAllUserOfBlogType,
   GetBlogType,
-  GetCommentType,
+  GetPostToBloggerType,
   GetPostType,
-  MinimalBlog,
   MyLikeStatus,
+  NewestLikesToBloggerType,
   NewestLikesType,
+  PostsTableType,
   QueryBlogType,
   QueryCommentType,
   QueryPostType,
+  TablesNames,
 } from '../../../core/models';
 import {
   BlogModel,
@@ -31,10 +37,14 @@ import {
   PostModel,
   PostModelType,
 } from '../../../core/entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class BloggerQueryRepository {
   constructor(
+    @InjectDataSource()
+    protected dataSource: DataSource,
     @InjectModel(BlogModel.name)
     private readonly BlogModel: Model<BlogModelType>,
     @InjectModel(PostModel.name)
@@ -131,22 +141,34 @@ export class BloggerQueryRepository {
     blogerId: string,
     queryAll: QueryBlogType,
   ): Promise<GetAllBlogsType> {
-    const allBlogs: BlogModelType[] = await this.BlogModel.find({
-      $and: [
-        {
-          'blogOwnerInfo.userId': blogerId,
-          'banInfo.isBanned': false,
-        },
-        { name: new RegExp(queryAll.searchNameTerm, 'gi') },
-      ],
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({
-        [queryAll.sortBy]: this.sortObject(queryAll.sortDirection),
-      });
+    const text1 = `SELECT * FROM "${TablesNames.Blogs}"
+                   WHERE "userOwnerId" = $1 AND "blogIsBanned" = false 
+                   AND ("name" ILIKE '%${queryAll.searchNameTerm}%')
+                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                   LIMIT $2 OFFSET $3`;
+    const values1 = [
+      blogerId,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-    const allMapsBlogs: GetBlogType[] = allBlogs.map((field) => {
+    const rawAllBlogs: BlogsTableType[] = await this.dataSource.query(
+      text1,
+      values1,
+    );
+
+    const text2 = `SELECT * FROM "${TablesNames.Blogs}"
+                   WHERE "userOwnerId" = $1 AND "blogIsBanned" = false 
+                   AND ("name" ILIKE '%${queryAll.searchNameTerm}%')`;
+
+    const values2 = [blogerId];
+
+    const rawAllBlogsCount: BlogsTableType[] = await this.dataSource.query(
+      text2,
+      values2,
+    );
+
+    const mappedAllBlogs: GetBlogType[] = rawAllBlogs.map((field) => {
       return {
         id: field.id,
         name: field.name,
@@ -157,15 +179,8 @@ export class BloggerQueryRepository {
       };
     });
 
-    const allCount: number = await this.BlogModel.countDocuments({
-      $and: [
-        {
-          'blogOwnerInfo.userId': blogerId,
-          'banInfo.isBanned': false,
-        },
-        { name: new RegExp(queryAll.searchNameTerm, 'gi') },
-      ],
-    });
+    const allCount: number = rawAllBlogsCount.length;
+
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
     return {
@@ -173,7 +188,7 @@ export class BloggerQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsBlogs,
+      items: mappedAllBlogs,
     };
   }
 
@@ -181,60 +196,55 @@ export class BloggerQueryRepository {
     userID: string,
     queryAll: QueryPostType,
     blogID: string,
-    params?: string,
-  ): Promise<GetAllPostsType> {
-    const findBlogSmart: BlogModelType | null = await this.BlogModel.findById(
-      blogID,
+  ): Promise<GetAllPostsToBloggerType> {
+    const text1 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "id" = $1`;
+
+    const values1 = [blogID];
+
+    const rawBlog: BlogsTableType[] = await this.dataSource.query(
+      text1,
+      values1,
     );
 
-    if (!findBlogSmart || findBlogSmart.banInfo.isBanned === true) {
-      throw new NotFoundException();
+    if (rawBlog.length < 1 || rawBlog[0].blogIsBanned === true) {
+      throw new NotFoundException('blog not found');
     }
 
-    if (findBlogSmart.blogOwnerInfo.userId !== userID) {
+    if (rawBlog[0].userOwnerId !== userID) {
       throw new ForbiddenException('The user is not the owner of the blog');
     }
 
-    const allPosts: PostModelType[] = await this.PostModel.find({
-      blogId: blogID,
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({ [queryAll.sortBy]: this.sortObject(queryAll.sortDirection) });
+    const text2 = `SELECT * FROM "${TablesNames.Posts}"
+                       WHERE "blogId" = $1 
+                       ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                       LIMIT $2 OFFSET $3`;
 
-    const allMapsPosts: GetPostType[] = allPosts.map((field) => {
-      let userStatus = MyLikeStatus.None;
+    const values2 = [
+      blogID,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-      const findUserLike: null | NewestLikesType =
-        field.extendedLikesInfo.newestLikes.find((v) => v.userId === userID);
+    const rawAllPosts: PostsTableType[] = await this.dataSource.query(
+      text2,
+      values2,
+    );
 
-      if (findUserLike) {
-        userStatus = findUserLike.myStatus;
-      }
+    const text3 = `SELECT * FROM "${TablesNames.Posts}"
+                       WHERE "blogId" = $1`;
 
-      let newestLikesArray = [];
+    const values3 = [blogID];
 
-      if (field.extendedLikesInfo.newestLikes.length > 0) {
-        let newestLikes: NewestLikesType[] | [] =
-          field.extendedLikesInfo.newestLikes.filter(
-            (v) => v.myStatus === MyLikeStatus.Like && v.isBanned === false,
-          );
+    const rawAllPostsCount: PostsTableType[] = await this.dataSource.query(
+      text3,
+      values3,
+    );
 
-        newestLikes.sort(function (a: NewestLikesType, b: NewestLikesType) {
-          return a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0;
-        });
-
-        newestLikes = newestLikes.slice(0, 3);
-
-        newestLikesArray = newestLikes.map((v: NewestLikesType) => {
-          return {
-            userId: v.userId,
-            login: v.login,
-            addedAt: v.addedAt,
-          };
-        });
-      }
-
+    const mappedAllPosts: GetPostToBloggerType[] = rawAllPosts.map((field) => {
+      const userStatus = MyLikeStatus.None;
+      const newestLikesArray: NewestLikesToBloggerType[] = [];
+      const likesCount = 0;
+      const dislikesCount = 0;
       return {
         id: field.id,
         title: field.title,
@@ -244,17 +254,16 @@ export class BloggerQueryRepository {
         blogName: field.blogName,
         createdAt: field.createdAt,
         extendedLikesInfo: {
-          likesCount: field.extendedLikesInfo.likesCount,
-          dislikesCount: field.extendedLikesInfo.dislikesCount,
+          likesCount: likesCount,
+          dislikesCount: dislikesCount,
           myStatus: userStatus,
           newestLikes: newestLikesArray,
         },
       };
     });
 
-    const allCount: number = await this.PostModel.countDocuments({
-      blogId: blogID,
-    });
+    const allCount: number = rawAllPostsCount.length;
+
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
     return {
@@ -262,8 +271,93 @@ export class BloggerQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsPosts,
+      items: mappedAllPosts,
     };
+
+    /*
+        const text2 = `SELECT Posts.*, Likes.*, Users."userIsBanned"
+                       FROM "${TablesNames.Posts}" AS Posts
+                       FULL JOIN "${TablesNames.ExtendedLikesPostInfo}" AS Likes
+                       ON Posts.id = Likes."postId"
+                       FULL JOIN "${TablesNames.Users}" AS Users
+                       ON Likes."userOwnerId" = Users.id
+                       WHERE Posts."blogId" = $1
+                       ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                       LIMIT $2 OFFSET $3`;
+
+        const values2 = [
+          blogID,
+          queryAll.pageSize,
+          this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+        ];
+
+        const rawAllPosts = await this.dataSource.query(text2, values2);
+
+        const mappedAllPosts: Promise<GetPostToBloggerType>[] = rawAllPosts.map(
+          async (field) => {
+            let userStatus = MyLikeStatus.None;
+
+            const text4 = `SELECT likes.*
+                         FROM "${TablesNames.ExtendedLikesPostInfo}" AS likes
+                         JOIN "${TablesNames.Users}" AS users
+                         ON likes.userOwnerId = users.id
+                         WHERE likes.postId = $1 AND users.userIsBanned = false`;
+
+            const values4 = [field.id];
+
+            const likesArrayToPost: ExtendedLikesPostInfoType[] =
+              await this.dataSource.query(text4, values4);
+
+            let newestLikesArray: NewestLikesToBloggerType[] = [];
+
+            let likesCount = 0;
+            let dislikesCount = 0;
+
+            if (likesArrayToPost.length > 0) {
+              const findUserLike: ExtendedLikesPostInfoType = likesArrayToPost.find(
+                (v) => v.userOwnerId === userID,
+              );
+
+              if (findUserLike) {
+                userStatus = findUserLike.status;
+              }
+              newestLikesArray = likesArrayToPost
+                .map((v) => {
+                  if (v.status === MyLikeStatus.Like) {
+                    likesCount++;
+                    return {
+                      addedAt: v.addedAt,
+                      userId: v.userOwnerId,
+                      login: v.userOwnerLogin,
+                    };
+                  }
+                })
+                .sort((a, b) =>
+                  a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0,
+                )
+                .slice(0, 3);
+
+              dislikesCount = likesArrayToPost.length - likesCount;
+            }
+            return {
+              id: field.id,
+              title: field.title,
+              shortDescription: field.shortDescription,
+              content: field.content,
+              blogId: field.blogId,
+              blogName: field.blogName,
+              createdAt: field.createdAt,
+              extendedLikesInfo: {
+                likesCount: likesCount,
+                dislikesCount: dislikesCount,
+                myStatus: userStatus,
+                newestLikes: newestLikesArray,
+              },
+            };
+          },
+        );
+
+        */
   }
   async getAllCommentsToBlogger(
     userID: string,
@@ -376,47 +470,63 @@ export class BloggerQueryRepository {
     blogID: string,
     queryAll: QueryBlogType,
   ): Promise<getBanAllUserOfBlogType> {
-    const findBlogSmart: BlogModelType | null = await this.BlogModel.findById(
+    const text1 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "id" = $1`;
+
+    const values1 = [blogID];
+
+    const rawBlog: BlogsTableType[] = await this.dataSource.query(
+      text1,
+      values1,
+    );
+
+    if (rawBlog.length < 1 || rawBlog[0].blogIsBanned === true) {
+      throw new NotFoundException('blog not found');
+    }
+
+    if (rawBlog[0].userOwnerId !== userToken) {
+      throw new ForbiddenException('The user is not the owner of the blog');
+    }
+
+    const text2 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
+                   WHERE "blogId" = $1 AND 
+                   "userLogin" ILIKE '%${queryAll.searchNameTerm}%'
+                   ORDER BY "${
+                     queryAll.sortBy === 'login' ? 'userLogin' : 'createdAt'
+                   }" ${queryAll.sortDirection}
+                   LIMIT $2 OFFSET $3`;
+
+    const values2 = [
       blogID,
-    );
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-    if (!findBlogSmart) {
-      throw new NotFoundException();
-    }
+    const rawAllBannedUserToBlog: BanAllUsersOfBlogInfoType[] =
+      await this.dataSource.query(text2, values2);
 
-    if (findBlogSmart.blogOwnerInfo.userId !== userToken) {
-      throw new ForbiddenException();
-    }
+    const text3 = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}"
+                   WHERE "blogId" = $1 AND 
+                   "userLogin" ILIKE '%${queryAll.searchNameTerm}%'`;
 
-    const banUserArraySearhLogin = findBlogSmart.banAllUsersInfo.filter(
-      (v) =>
-        new RegExp(queryAll.searchNameTerm, 'gi').test(v.login) &&
-        v.banInfo.isBanned === true,
-    );
+    const values3 = [blogID];
 
-    const skip = this.skippedObject(queryAll.pageNumber, queryAll.pageSize);
-    const limit = queryAll.pageSize;
-    const sortBy = queryAll.sortBy;
-    const sortDirections = queryAll.sortDirection;
+    const rawAllUsersBannedCount: BanAllUsersOfBlogInfoType[] =
+      await this.dataSource.query(text3, values3);
 
-    banUserArraySearhLogin.sort(
-      (a: AllBanUsersInfoType, b: AllBanUsersInfoType) => {
-        if (a[sortBy] < b[sortBy]) {
-          return sortDirections === 'asc' ? -1 : 1;
-        }
-        if (a[sortBy] > b[sortBy]) {
-          return sortDirections === 'asc' ? 1 : -1;
-        }
-        return 0;
-      },
-    );
+    const paginationBanUserArray: AllBanUsersInfoType[] =
+      rawAllBannedUserToBlog.map((field) => {
+        return {
+          id: field.userId,
+          login: field.userLogin,
+          banInfo: {
+            isBanned: true,
+            banDate: field.banDate,
+            banReason: field.banReason,
+          },
+        };
+      });
 
-    const paginationBanUserArray = banUserArraySearhLogin.slice(
-      skip,
-      skip + limit,
-    );
-
-    const allCount: number = banUserArraySearhLogin.length;
+    const allCount: number = rawAllUsersBannedCount.length;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 

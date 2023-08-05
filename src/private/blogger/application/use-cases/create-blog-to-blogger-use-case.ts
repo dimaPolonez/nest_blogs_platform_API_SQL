@@ -1,13 +1,14 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { CreateBlogType } from '../../../../core/models';
+import {
+  BlogsTableType,
+  CreateBlogType,
+  GetBlogType,
+} from '../../../../core/models';
 import { BloggerRepository } from '../../repository/blogger.repository';
-import { BlogModel, BlogModelType } from '../../../../core/entity';
 
 export class CreateBlogToBloggerCommand {
   constructor(
-    public readonly userId: string,
+    public readonly userID: string,
     public readonly userLogin: string,
     public readonly blogDTO: CreateBlogType,
   ) {}
@@ -17,25 +18,28 @@ export class CreateBlogToBloggerCommand {
 export class CreateBlogToBloggerUseCase
   implements ICommandHandler<CreateBlogToBloggerCommand>
 {
-  constructor(
-    protected readonly bloggerRepository: BloggerRepository,
-    @InjectModel(BlogModel.name)
-    protected readonly BlogModel: Model<BlogModelType>,
-  ) {}
+  constructor(protected readonly bloggerRepository: BloggerRepository) {}
 
-  async execute(command: CreateBlogToBloggerCommand): Promise<string> {
-    const { userId, userLogin, blogDTO } = command;
+  async execute(command: CreateBlogToBloggerCommand): Promise<GetBlogType> {
+    const { userID, userLogin, blogDTO } = command;
 
-    const createBlogSmart: BlogModelType = new this.BlogModel({
-      ...blogDTO,
-      blogOwnerInfo: {
-        userId: userId,
-        userLogin: userLogin,
-      },
+    const rawBlog: BlogsTableType[] = await this.bloggerRepository.createBlog(
+      blogDTO,
+      userID,
+      userLogin,
+    );
+
+    const mappedBlog: GetBlogType[] = rawBlog.map((v) => {
+      return {
+        id: v.id,
+        name: v.name,
+        description: v.description,
+        websiteUrl: v.websiteUrl,
+        createdAt: v.createdAt,
+        isMembership: v.isMembership,
+      };
     });
 
-    await this.bloggerRepository.save(createBlogSmart);
-
-    return createBlogSmart.id;
+    return mappedBlog[0];
   }
 }

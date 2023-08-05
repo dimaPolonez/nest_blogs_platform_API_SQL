@@ -1,7 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { CommentModelType } from '../../../../core/entity';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CommentsRepository } from '../../repository/comments.repository';
+import { CommentsTableType } from '../../../../core/models';
 
 export class DeleteCommentCommand {
   constructor(
@@ -19,17 +19,17 @@ export class DeleteCommentUseCase
   async execute(command: DeleteCommentCommand) {
     const { userID, commentID } = command;
 
-    const findComment: CommentModelType =
-      await this.commentRepository.findCommentById(commentID);
+    const rawComment: CommentsTableType[] =
+      await this.commentRepository.findRawCommentById(commentID);
 
-    if (!findComment) {
+    if (rawComment.length < 1) {
       throw new NotFoundException('comment not found');
     }
 
-    if (findComment.commentatorInfo.userId !== userID) {
+    if (rawComment[0].userOwnerId !== userID) {
       throw new ForbiddenException("You can't delete another user's comment");
     }
 
-    await this.commentRepository.deleteComment(commentID);
+    await this.commentRepository.deleteRawCommentById(commentID);
   }
 }

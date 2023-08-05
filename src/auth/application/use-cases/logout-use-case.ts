@@ -17,14 +17,14 @@ export class LogoutUseCase implements ICommandHandler<LogoutCommand> {
   async execute(command: LogoutCommand) {
     const { userID, deviceID } = command;
 
-    const rowSession: SessionsUsersInfoType[] =
+    const rawSession: SessionsUsersInfoType[] =
       await this.authRepository.findSession(deviceID);
 
-    if (rowSession.length < 1) {
+    if (rawSession.length < 1) {
       throw new NotFoundException();
     }
 
-    if (rowSession[0].userId !== userID) {
+    if (rawSession[0].userId !== userID) {
       throw new ForbiddenException();
     }
 

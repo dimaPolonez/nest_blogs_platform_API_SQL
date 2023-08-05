@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   Query,
@@ -46,7 +47,7 @@ export class PostsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async likeStatusPost(
     @Request() req,
-    @Param('id') postID: string,
+    @Param('id', new ParseUUIDPipe()) postID: string,
     @Body() bodyLikeStatus: UpdateLikeStatusPostDto,
   ) {
     await this.commandBus.execute(
@@ -64,7 +65,7 @@ export class PostsController {
   @HttpCode(HttpStatus.OK)
   async getAllCommentsOfPost(
     @Request() req,
-    @Param('id') postID: string,
+    @Param('id', new ParseUUIDPipe()) postID: string,
     @Query() queryAll: QueryCommentDto,
   ): Promise<GetAllCommentsOfPostType> {
     return await this.postQueryRepository.getAllCommentsOfPost(
@@ -79,7 +80,7 @@ export class PostsController {
   @HttpCode(HttpStatus.CREATED)
   async createCommentOfPost(
     @Request() req,
-    @Param('id') postID: string,
+    @Param('id', new ParseUUIDPipe()) postID: string,
     @Body() commentDTO: CreateCommentOfPostDto,
   ): Promise<GetCommentOfPostType> {
     return await this.commandBus.execute(
@@ -110,7 +111,7 @@ export class PostsController {
   @HttpCode(HttpStatus.OK)
   async getOnePost(
     @Request() req,
-    @Param('id') postID: string,
+    @Param('id', new ParseUUIDPipe()) postID: string,
   ): Promise<GetPostType> {
     return await this.postQueryRepository.findPostById(postID, req.user.userID);
   }

@@ -8,9 +8,11 @@ import {
   GetCommentType,
   GetPostType,
   MyLikeStatus,
+  NewestLikesToBloggerType,
   NewestLikesType,
   QueryCommentType,
   QueryPostType,
+  TablesNames,
 } from '../../../core/models';
 import {
   CommentModel,
@@ -18,10 +20,14 @@ import {
   PostModel,
   PostModelType,
 } from '../../../core/entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class PostsQueryRepository {
   constructor(
+    @InjectDataSource()
+    protected dataSource: DataSource,
     @InjectModel(PostModel.name)
     private readonly PostModel: Model<PostModelType>,
     @InjectModel(CommentModel.name)
@@ -36,12 +42,37 @@ export class PostsQueryRepository {
   }
 
   async findPostById(postID: string, userID?: string): Promise<GetPostType> {
-    const findPostSmart = await this.PostModel.findById(postID);
+    const text = `SELECT Posts.*, Blogs."blogIsBanned" 
+                   FROM "${TablesNames.Posts}" AS Posts
+                   FULL JOIN "${TablesNames.Blogs}" AS Blogs
+                   ON Posts."blogId" = Blogs.id
+                   WHERE Posts.id = $1`;
 
-    if (!findPostSmart || findPostSmart.blogIsBanned === true) {
+    const values = [postID];
+
+    const rawPost = await this.dataSource.query(text, values);
+
+    if (rawPost.length < 1 || rawPost[0].blogIsBanned === true) {
       throw new NotFoundException('post not found');
     }
 
+    return {
+      id: rawPost[0].id,
+      title: rawPost[0].title,
+      shortDescription: rawPost[0].shortDescription,
+      content: rawPost[0].content,
+      blogId: rawPost[0].blogId,
+      blogName: rawPost[0].blogName,
+      createdAt: rawPost[0].createdAt,
+      extendedLikesInfo: {
+        likesCount: 0,
+        dislikesCount: 0,
+        myStatus: MyLikeStatus.None,
+        newestLikes: [],
+      },
+    };
+
+    /*
     let userStatus = MyLikeStatus.None;
 
     if (userID !== 'quest') {
@@ -75,23 +106,7 @@ export class PostsQueryRepository {
           addedAt: v.addedAt,
         };
       });
-    }
-
-    return {
-      id: findPostSmart.id,
-      title: findPostSmart.title,
-      shortDescription: findPostSmart.shortDescription,
-      content: findPostSmart.content,
-      blogId: findPostSmart.blogId,
-      blogName: findPostSmart.blogName,
-      createdAt: findPostSmart.createdAt,
-      extendedLikesInfo: {
-        likesCount: findPostSmart.extendedLikesInfo.likesCount,
-        dislikesCount: findPostSmart.extendedLikesInfo.dislikesCount,
-        myStatus: userStatus,
-        newestLikes: newestLikesArray,
-      },
-    };
+    }*/
   }
 
   async getAllPosts(
@@ -99,18 +114,84 @@ export class PostsQueryRepository {
     queryAll: QueryPostType,
     blogID?: string,
   ): Promise<GetAllPostsType> {
-    let findObject: object = { blogIsBanned: false };
+    const text2 = `SELECT Posts.*, Blogs."blogIsBanned" 
+                   FROM "${TablesNames.Posts}" AS Posts
+                   FULL JOIN "${TablesNames.Blogs}" AS Blogs
+                   ON Posts."blogId" = Blogs.id`;
 
-    if (blogID) {
-      findObject = { blogId: blogID, blogIsBanned: false };
-    }
+    const rawAllPosts = await this.dataSource.query(text2);
 
-    const allPosts: PostModelType[] = await this.PostModel.find(findObject)
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({ [queryAll.sortBy]: this.sortObject(queryAll.sortDirection) });
+    const mappedAllPosts: GetPostType[] = rawAllPosts.map((field) => {
+      const userStatus = MyLikeStatus.None;
+      const newestLikesArray: NewestLikesToBloggerType[] = [];
+      const likesCount = 0;
+      const dislikesCount = 0;
 
-    const allMapsPosts: GetPostType[] = allPosts.map((field) => {
+      if (blogID && field.blogId === blogID && field.blogIsBanned === false) {
+        return {
+          id: field.id,
+          title: field.title,
+          shortDescription: field.shortDescription,
+          content: field.content,
+          blogId: field.blogId,
+          blogName: field.blogName,
+          createdAt: field.createdAt,
+          extendedLikesInfo: {
+            likesCount: likesCount,
+            dislikesCount: dislikesCount,
+            myStatus: userStatus,
+            newestLikes: newestLikesArray,
+          },
+        };
+      }
+      if (field.blogIsBanned === false) {
+        return {
+          id: field.id,
+          title: field.title,
+          shortDescription: field.shortDescription,
+          content: field.content,
+          blogId: field.blogId,
+          blogName: field.blogName,
+          createdAt: field.createdAt,
+          extendedLikesInfo: {
+            likesCount: likesCount,
+            dislikesCount: dislikesCount,
+            myStatus: userStatus,
+            newestLikes: newestLikesArray,
+          },
+        };
+      }
+    });
+
+    const skip = this.skippedObject(queryAll.pageNumber, queryAll.pageSize);
+    const limit = queryAll.pageSize;
+    const sortBy = queryAll.sortBy;
+    const sortDirections = queryAll.sortDirection;
+
+    mappedAllPosts.sort((a: GetPostType, b: GetPostType) => {
+      if (a[sortBy] < b[sortBy]) {
+        return sortDirections === 'asc' ? -1 : 1;
+      }
+      if (a[sortBy] > b[sortBy]) {
+        return sortDirections === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    const paginationFullPosts = mappedAllPosts.slice(skip, skip + limit);
+
+    const allCount: number = mappedAllPosts.length;
+    const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
+
+    return {
+      pagesCount: pagesCount,
+      page: queryAll.pageNumber,
+      pageSize: queryAll.pageSize,
+      totalCount: allCount,
+      items: paginationFullPosts,
+    };
+
+    /*const allMapsPosts: GetPostType[] = allPosts.map((field) => {
       let userStatus = MyLikeStatus.None;
 
       if (userID !== 'quest') {
@@ -160,18 +241,7 @@ export class PostsQueryRepository {
           newestLikes: newestLikesArray,
         },
       };
-    });
-
-    const allCount: number = await this.PostModel.countDocuments(findObject);
-    const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
-
-    return {
-      pagesCount: pagesCount,
-      page: queryAll.pageNumber,
-      pageSize: queryAll.pageSize,
-      totalCount: allCount,
-      items: allMapsPosts,
-    };
+    });*/
   }
   async getAllCommentsOfPost(
     userID: string,

@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { SuperAdminRepository } from '../../repository/super-admin.repository';
-import { BlogModelType, UserModelType } from '../../../../core/entity';
+import { BlogsTableType, UsersTableType } from '../../../../core/models';
 
 export class BindBlogCommand {
   constructor(public readonly blogID: string, public readonly userID: string) {}
@@ -14,27 +14,26 @@ export class BindBlogUseCase implements ICommandHandler<BindBlogCommand> {
   async execute(command: BindBlogCommand) {
     const { blogID, userID } = command;
 
-    const findBlog: BlogModelType | null =
-      await this.superAdminRepository.findBlogById(blogID);
+    const rawUser: UsersTableType[] =
+      await this.superAdminRepository.findUserByIdSql(userID);
 
-    if (!findBlog) {
-      throw new NotFoundException('blog not found');
-    }
-
-    const findUser: UserModelType | null =
-      await this.superAdminRepository.findUserById(userID);
-
-    if (!findUser) {
+    if (rawUser.length < 1) {
       throw new NotFoundException('user not found');
     }
 
-    if (!findBlog.blogOwnerInfo.userId) {
-      await findBlog.bindBlog({
-        userId: findUser.id,
-        userLogin: findUser.login,
-      });
+    const rawBlog: BlogsTableType[] =
+      await this.superAdminRepository.findBlogByIdSql(blogID);
+
+    if (rawBlog.length < 1) {
+      throw new NotFoundException('blog not found');
     }
 
-    await this.superAdminRepository.save(findBlog);
+    if (!rawBlog[0].userOwnerId) {
+      await this.superAdminRepository.bindBlogToUser(
+        blogID,
+        userID,
+        rawUser[0].login,
+      );
+    }
   }
 }

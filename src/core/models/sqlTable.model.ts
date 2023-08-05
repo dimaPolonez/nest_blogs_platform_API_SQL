@@ -33,6 +33,7 @@ export type BlogsTableType = {
   createdAt: string;
   isMembership: boolean;
   userOwnerId: string;
+  userOwnerLogin: string;
   blogIsBanned: boolean;
   banDate: string;
 };
@@ -40,6 +41,7 @@ export type BlogsTableType = {
 export type PostsTableType = {
   id: string;
   blogId: string;
+  blogName: string;
   title: string;
   shortDescription: string;
   content: string;
@@ -49,6 +51,7 @@ export type PostsTableType = {
 export type CommentsTableType = {
   id: string;
   userOwnerId: string;
+  userOwnerLogin: string;
   postId: string;
   content: string;
   createdAt: string;
@@ -67,13 +70,16 @@ export type BanAllUsersOfBlogInfoType = {
   id: string;
   blogId: string;
   userId: string;
+  userLogin: string;
   banDate: string;
   banReason: string;
+  createdAt: string;
 };
 
 export type ExtendedLikesPostInfoType = {
   id: string;
   userOwnerId: string;
+  userOwnerLogin: string;
   postId: string;
   status: MyLikeStatus;
   addedAt: string;
@@ -82,6 +88,7 @@ export type ExtendedLikesPostInfoType = {
 export type ExtendedLikesCommentInfoType = {
   id: string;
   userOwnerId: string;
+  userOwnerLogin: string;
   commentId: string;
   status: MyLikeStatus;
   addedAt: string;

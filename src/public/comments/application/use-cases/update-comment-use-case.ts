@@ -1,6 +1,5 @@
-import { UpdateCommentType } from '../../../../core/models';
+import { CommentsTableType, UpdateCommentType } from '../../../../core/models';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { CommentModelType } from '../../../../core/entity';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CommentsRepository } from '../../repository/comments.repository';
 
@@ -21,19 +20,20 @@ export class UpdateCommentUseCase
   async execute(command: UpdateCommentCommand) {
     const { userID, commentID, commentDTO } = command;
 
-    const findComment: CommentModelType | null =
-      await this.commentRepository.findCommentById(commentID);
+    const rawComment: CommentsTableType[] =
+      await this.commentRepository.findRawCommentById(commentID);
 
-    if (!findComment) {
+    if (rawComment.length < 1) {
       throw new NotFoundException('comment not found');
     }
 
-    if (findComment.commentatorInfo.userId !== userID) {
+    if (rawComment[0].userOwnerId !== userID) {
       throw new ForbiddenException("You can't update another user's comment");
     }
 
-    await findComment.updateComment(commentDTO);
-
-    await this.commentRepository.save(findComment);
+    await this.commentRepository.updateRawCommentById(
+      commentID,
+      commentDTO.content,
+    );
   }
 }

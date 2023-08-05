@@ -1,14 +1,13 @@
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { CreatePostOfBlogType } from '../../../../core/models';
+import {
+  BlogsTableType,
+  CreatePostOfBlogType,
+  GetPostOfBlogType,
+  MyLikeStatus,
+  PostsTableType,
+} from '../../../../core/models';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BloggerRepository } from '../../repository/blogger.repository';
-import {
-  BlogModelType,
-  PostModel,
-  PostModelType,
-} from '../../../../core/entity';
 
 export class CreatePostOfBlogToBloggerCommand {
   constructor(
@@ -22,34 +21,50 @@ export class CreatePostOfBlogToBloggerCommand {
 export class CreatePostOfBlogToBloggerUseCase
   implements ICommandHandler<CreatePostOfBlogToBloggerCommand>
 {
-  constructor(
-    protected bloggerRepository: BloggerRepository,
-    @InjectModel(PostModel.name)
-    private readonly PostModel: Model<PostModelType>,
-  ) {}
+  constructor(protected bloggerRepository: BloggerRepository) {}
 
-  async execute(command: CreatePostOfBlogToBloggerCommand): Promise<string> {
+  async execute(
+    command: CreatePostOfBlogToBloggerCommand,
+  ): Promise<GetPostOfBlogType> {
     const { bloggerId, blogID, postDTO } = command;
 
-    const findBlog: BlogModelType | null =
-      await this.bloggerRepository.findBlogById(blogID);
+    const rawBlog: BlogsTableType[] = await this.bloggerRepository.findRawBlog(
+      blogID,
+    );
 
-    if (!findBlog) {
+    if (rawBlog.length < 1) {
       throw new NotFoundException('blog not found');
     }
 
-    if (findBlog.blogOwnerInfo.userId !== bloggerId) {
+    if (rawBlog[0].userOwnerId !== bloggerId) {
       throw new ForbiddenException('The user is not the owner of the blog');
     }
 
-    const createPostSmart: PostModelType = new this.PostModel({
-      ...postDTO,
-      blogId: blogID,
-      blogName: findBlog.name,
+    const rawNewPost: PostsTableType[] =
+      await this.bloggerRepository.createPostOfBlog(
+        postDTO,
+        blogID,
+        rawBlog[0].name,
+      );
+
+    const mappedNewPost: GetPostOfBlogType[] = rawNewPost.map((v) => {
+      return {
+        id: v.id,
+        title: v.title,
+        shortDescription: v.shortDescription,
+        content: v.content,
+        blogId: v.blogId,
+        blogName: v.blogName,
+        createdAt: v.createdAt,
+        extendedLikesInfo: {
+          likesCount: 0,
+          dislikesCount: 0,
+          myStatus: MyLikeStatus.None,
+          newestLikes: [],
+        },
+      };
     });
 
-    await this.bloggerRepository.save(createPostSmart);
-
-    return createPostSmart.id;
+    return mappedNewPost[0];
   }
 }

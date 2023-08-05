@@ -10,11 +10,11 @@ export enum EntityLikes {
 }
 
 export type NewestLikesType = {
+  myStatus: MyLikeStatus;
+  isBanned: boolean;
+  addedAt: string;
   userId: string;
   login: string;
-  myStatus: MyLikeStatus;
-  addedAt: string;
-  isBanned: boolean;
 };
 
 type ExtendedLikesType = {
@@ -60,6 +60,38 @@ export type GetAllPostsType = {
   pageSize: number;
   totalCount: number;
   items: GetPostType[];
+};
+
+export type GetAllPostsToBloggerType = {
+  pagesCount: number;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  items: GetPostToBloggerType[];
+};
+
+export type GetPostToBloggerType = {
+  id: string;
+  title: string;
+  shortDescription: string;
+  content: string;
+  blogId: string;
+  blogName: string;
+  createdAt: string;
+  extendedLikesInfo: ExtendedLikesToBloggerType;
+};
+
+type ExtendedLikesToBloggerType = {
+  likesCount: number;
+  dislikesCount: number;
+  myStatus: MyLikeStatus;
+  newestLikes: [] | NewestLikesToBloggerType[];
+};
+
+export type NewestLikesToBloggerType = {
+  addedAt: string;
+  userId: string;
+  login: string;
 };
 
 type LikesInfoType = {

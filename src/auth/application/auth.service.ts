@@ -5,7 +5,7 @@ import {
   UsersTableType,
 } from '../../core/models';
 import { BcryptAdapter } from '../../adapters';
-import { BlogModelType, UserModel, UserModelType } from '../../core/entity';
+import { BlogModelType, UserModelType } from '../../core/entity';
 import { AuthRepository } from '../repository/auth.repository';
 import { isAfter } from 'date-fns';
 
@@ -32,15 +32,15 @@ export class AuthService {
   }
 
   async checkedConfirmCode(codeConfirm: string): Promise<boolean> {
-    const rowUser: UsersTableType[] = await this.authRepository.findUserByCode(
+    const rawUser: UsersTableType[] = await this.authRepository.findUserByCode(
       codeConfirm,
     );
 
-    if (rowUser.length < 1) {
+    if (rawUser.length < 1) {
       return false;
     }
 
-    const dateExpiredCode = Date.parse(rowUser[0].codeActivatedExpired);
+    const dateExpiredCode = Date.parse(rawUser[0].codeActivatedExpired);
     const dateNow = new Date();
 
     if (!isAfter(dateExpiredCode, dateNow)) {
@@ -51,11 +51,11 @@ export class AuthService {
   }
 
   async checkedUniqueEmail(email: string): Promise<boolean> {
-    const rowUser: UsersTableType[] = await this.authRepository.checkedEmail(
+    const rawUser: UsersTableType[] = await this.authRepository.checkedEmail(
       email,
     );
 
-    if (rowUser.length > 0) {
+    if (rawUser.length > 0) {
       return false;
     }
 
@@ -63,15 +63,15 @@ export class AuthService {
   }
 
   async checkedEmailToBase(email: string): Promise<boolean> {
-    const rowUser: UsersTableType[] = await this.authRepository.checkedEmail(
+    const rawUser: UsersTableType[] = await this.authRepository.checkedEmail(
       email,
     );
 
-    if (rowUser.length < 1) {
+    if (rawUser.length < 1) {
       return false;
     }
 
-    if (rowUser[0].userIsConfirmed === true) {
+    if (rawUser[0].userIsConfirmed === true) {
       return false;
     }
 
@@ -79,10 +79,10 @@ export class AuthService {
   }
 
   async checkedUniqueLogin(login: string): Promise<boolean> {
-    const rowUser: UsersTableType[] =
+    const rawUser: UsersTableType[] =
       await this.authRepository.checkedUniqueLogin(login);
 
-    if (rowUser.length > 0) {
+    if (rawUser.length > 0) {
       return false;
     }
 
@@ -101,32 +101,32 @@ export class AuthService {
   }
 
   async findUserLogin(userID: string): Promise<string> {
-    const rowUser: UsersTableType[] = await this.authRepository.findUser(
+    const rawUser: UsersTableType[] = await this.authRepository.findUser(
       userID,
     );
-    if (rowUser.length < 1) {
+    if (rawUser.length < 1) {
       throw new UnauthorizedException('Token is not valid');
     }
-    return rowUser[0].login;
+    return rawUser[0].login;
   }
   async validateUser(loginDTO: LoginType): Promise<null | string> {
-    const rowUser: UsersTableType[] =
+    const rawUser: UsersTableType[] =
       await this.authRepository.findUserEmailOrLogin(loginDTO.loginOrEmail);
 
-    if (rowUser.length < 1 || rowUser[0].userIsBanned === true) {
+    if (rawUser.length < 1 || rawUser[0].userIsBanned === true) {
       return null;
     }
 
     const validPassword: boolean = await this.bcryptAdapter.hushCompare(
       loginDTO.password,
-      rowUser[0].hushPass,
+      rawUser[0].hushPass,
     );
 
     if (!validPassword) {
       return null;
     }
 
-    return rowUser[0].id;
+    return rawUser[0].id;
   }
 
   async checkedActiveSession(

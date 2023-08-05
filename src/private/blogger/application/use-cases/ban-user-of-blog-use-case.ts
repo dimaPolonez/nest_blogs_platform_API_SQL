@@ -1,11 +1,10 @@
 import {
-  AllBanUsersInfoType,
   BanUserOfBlogType,
+  BlogsTableType,
+  UsersTableType,
 } from '../../../../core/models';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { BloggerRepository } from '../../repository/blogger.repository';
-import { BlogModelType } from '../../../../core/entity';
-import { AuthService } from '../../../../auth/application/auth.service';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 export class BanUserOfBlogCommand {
@@ -20,58 +19,42 @@ export class BanUserOfBlogCommand {
 export class BanUserOfBlogUseCase
   implements ICommandHandler<BanUserOfBlogCommand>
 {
-  constructor(
-    protected bloggerRepository: BloggerRepository,
-    protected authService: AuthService,
-  ) {}
+  constructor(protected bloggerRepository: BloggerRepository) {}
 
   async execute(command: BanUserOfBlogCommand) {
     const { userToken, banUserOfBlogDTO, userID } = command;
 
-    const findBlogSmart: BlogModelType | null =
-      await this.bloggerRepository.findBlogById(banUserOfBlogDTO.blogId);
+    const rawBlog: BlogsTableType[] = await this.bloggerRepository.findRawBlog(
+      banUserOfBlogDTO.blogId,
+    );
 
-    const userLogin: string | null =
-      await this.authService.findUserLoginNotChecked(userID);
-
-    if (!userLogin) {
-      throw new NotFoundException();
+    if (rawBlog.length < 1) {
+      throw new NotFoundException('blog not found');
     }
 
-    if (findBlogSmart.blogOwnerInfo.userId !== userToken) {
-      throw new ForbiddenException();
+    const rawUser: UsersTableType[] = await this.bloggerRepository.findRawUser(
+      userID,
+    );
+
+    if (rawUser.length < 1) {
+      throw new NotFoundException('user not found');
     }
 
-    let banDate = null;
+    if (rawBlog[0].userOwnerId !== userToken) {
+      throw new ForbiddenException('The user is not the owner of the blog');
+    }
 
     if (banUserOfBlogDTO.isBanned === true) {
-      banDate = new Date().toISOString();
+      await this.bloggerRepository.addBanUserToBlog(
+        banUserOfBlogDTO,
+        userID,
+        rawUser[0].login,
+      );
+    } else {
+      await this.bloggerRepository.deleteBanUserToBlog(
+        banUserOfBlogDTO.blogId,
+        userID,
+      );
     }
-
-    const banUserDTO: AllBanUsersInfoType = {
-      id: userID,
-      login: userLogin,
-      banInfo: {
-        isBanned: banUserOfBlogDTO.isBanned,
-        banDate: banDate,
-        banReason: banUserOfBlogDTO.banReason,
-      },
-    };
-
-    const userIsBannedArray = findBlogSmart.banAllUsersInfo.map((v) => {
-      if (v.id === userID) {
-        v.banInfo.isBanned = banUserOfBlogDTO.isBanned;
-        v.banInfo.banDate = banDate;
-        v.banInfo.banReason = banUserOfBlogDTO.banReason;
-        return false;
-      }
-      return true;
-    });
-
-    if (userIsBannedArray) {
-      findBlogSmart.banAllUsersInfo.push(banUserDTO);
-    }
-
-    await this.bloggerRepository.save(findBlogSmart);
   }
 }
