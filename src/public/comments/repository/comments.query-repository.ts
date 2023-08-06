@@ -32,16 +32,18 @@ export class CommentsQueryRepository {
       throw new NotFoundException('comment not found');
     }
 
+    console.log(rawComment, commentID);
+
     let userStatus = MyLikeStatus.None;
 
     const text1 = `SELECT like_comment.*,
-                  COUNT(CASE WHEN like_comment.status = 'Like' THEN 1 END) AS likesCount, 
-                  COUNT(CASE WHEN like_comment.status = 'Dislike' THEN 1 END) AS dislikesCount
+                  COUNT(SELECT * FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Like' AND "commentId" = $1) AS "likesCount",
+                  COUNT(SELECT * FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Dislike'  AND "commentId" = $1) AS "dislikesCount"
                   FROM "${TablesNames.ExtendedLikesCommentInfo}" AS like_comment
-                  JOIN "${TablesNames.Users}" AS user_owner
+                  FULL JOIN "${TablesNames.Users}" AS user_owner
                   ON like_comment."userOwnerId" = user_owner.id
                   WHERE like_comment."commentId" = $1 AND user_owner."userIsBanned" = false
-                  GROUP BY like_comment.id, like_comment."userOwnerId", like_comment."status" `;
+                  GROUP BY like_comment.id, like_comment."userOwnerId", like_comment."status"`;
 
     const values1 = [commentID];
 
@@ -55,6 +57,8 @@ export class CommentsQueryRepository {
       }
     }
 
+    console.log(commentLikes);
+
     return {
       id: rawComment[0].id,
       content: rawComment[0].content,
@@ -64,8 +68,8 @@ export class CommentsQueryRepository {
       },
       createdAt: rawComment[0].createdAt,
       likesInfo: {
-        likesCount: commentLikes[0].likescount,
-        dislikesCount: commentLikes[0].dislikescount,
+        likesCount: commentLikes[0].likesCount,
+        dislikesCount: commentLikes[0].dislikesCount,
         myStatus: userStatus,
       },
     };
