@@ -32,13 +32,11 @@ export class CommentsQueryRepository {
       throw new NotFoundException('comment not found');
     }
 
-    console.log(rawComment, commentID);
-
     let userStatus = MyLikeStatus.None;
 
     const text1 = `SELECT like_comment.*,
-                  (select COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Like' AND "commentId" = $1),
-                  (select COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Dislike'  AND "commentId" = $1)
+                  (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Like' AND "commentId" = $1),
+                  (SELECT COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Dislike'  AND "commentId" = $1)
                   FROM "${TablesNames.ExtendedLikesCommentInfo}" AS like_comment
                   JOIN "${TablesNames.Users}" AS user_owner
                   ON like_comment."userOwnerId" = user_owner.id
@@ -49,15 +47,13 @@ export class CommentsQueryRepository {
 
     const commentLikes = await this.dataSource.query(text1, values1);
 
-    if (userID !== 'quest') {
+    if (userID !== 'quest' && commentLikes.length > 0) {
       const findUserLike = commentLikes.find((l) => l.userOwnerId === userID);
 
       if (findUserLike) {
         userStatus = findUserLike.status;
       }
     }
-
-    console.log(commentLikes);
 
     return {
       id: rawComment[0].id,
@@ -68,8 +64,9 @@ export class CommentsQueryRepository {
       },
       createdAt: rawComment[0].createdAt,
       likesInfo: {
-        likesCount: commentLikes[0].likesCount,
-        dislikesCount: commentLikes[0].dislikesCount,
+        likesCount: commentLikes.length > 0 ? commentLikes[0].likesCount : 0,
+        dislikesCount:
+          commentLikes.length > 0 ? commentLikes[0].dislikesCount : 0,
         myStatus: userStatus,
       },
     };

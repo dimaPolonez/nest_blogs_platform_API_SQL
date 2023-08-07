@@ -248,44 +248,53 @@ export class PostsQueryRepository {
     postID: string,
     queryAll: QueryCommentType,
   ): Promise<GetAllCommentsType> {
-    const allComments: CommentModelType[] = await this.CommentModel.find({
-      $and: [{ postId: postID }, { 'commentatorInfo.isBanned': false }],
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({ [queryAll.sortBy]: this.sortObject(queryAll.sortDirection) });
+    const text = `SELECT c.*,
+                  (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE status = 'Like' AND "commentId" = c.id),
+                  (SELECT COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE status = 'Dislike' AND "commentId" = c.id),
+                  (SELECT status FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE "userOwnerId" = $1 AND "commentId" = c.id),
+                  (SELECT COUNT(*) as "allCount" FROM "${TablesNames.Comments}" 
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
+                  WHERE "postId" = $2 AND u."userIsBanned" = false)
+                  FROM "${TablesNames.Comments}" AS c
+                  FULL JOIN "${TablesNames.Users}" AS u ON c."userOwnerId" = u.id
+                  FULL JOIN "${TablesNames.ExtendedLikesCommentInfo}" AS l ON c.id = l."commentId"
+                  WHERE c."postId" = $2 AND u."userIsBanned" = false
+                  GROUP BY c.id, c."userOwnerId", c."userOwnerLogin", c."postId", c."content", c."createdAt"
+                  ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                  LIMIT $3 OFFSET $4`;
 
-    const allMapsComments: GetCommentType[] = allComments.map((field) => {
-      let userStatus = MyLikeStatus.None;
+    const values = [
+      userID === 'quest' ? postID : userID,
+      postID,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-      if (userID !== 'quest') {
-        const findUserLike: null | NewestLikesType =
-          field.likesInfo.newestLikes.find((v) => v.userId === userID);
+    const rawAllCommentToPost = await this.dataSource.query(text, values);
 
-        if (findUserLike) {
-          userStatus = findUserLike.myStatus;
-        }
-      }
+    const mappedRawAllCommentToPost: GetCommentType[] =
+      await rawAllCommentToPost.map((field) => {
+        return {
+          id: field.id,
+          content: field.content,
+          commentatorInfo: {
+            userId: field.userOwnerId,
+            userLogin: field.userOwnerLogin,
+          },
+          createdAt: field.createdAt,
+          likesInfo: {
+            likesCount: field.likesCount,
+            dislikesCount: field.dislikesCount,
+            myStatus: field.status === null ? 'None' : field.status,
+          },
+        };
+      });
 
-      return {
-        id: field.id,
-        content: field.content,
-        commentatorInfo: {
-          userId: field.commentatorInfo.userId,
-          userLogin: field.commentatorInfo.userLogin,
-        },
-        createdAt: field.createdAt,
-        likesInfo: {
-          likesCount: field.likesInfo.likesCount,
-          dislikesCount: field.likesInfo.dislikesCount,
-          myStatus: userStatus,
-        },
-      };
-    });
-
-    const allCount: number = await this.CommentModel.countDocuments({
-      postId: postID,
-    });
+    const allCount: number =
+      rawAllCommentToPost.lenght > 0 ? rawAllCommentToPost[0].allCount : 0;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
@@ -294,7 +303,7 @@ export class PostsQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsComments,
+      items: mappedRawAllCommentToPost,
     };
   }
   async getCommentOfPost(
