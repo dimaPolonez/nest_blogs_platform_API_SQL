@@ -37,10 +37,10 @@ export class CommentsQueryRepository {
     let userStatus = MyLikeStatus.None;
 
     const text1 = `SELECT like_comment.*,
-                  COUNT(SELECT * FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Like' AND "commentId" = $1) AS "likesCount",
-                  COUNT(SELECT * FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Dislike'  AND "commentId" = $1) AS "dislikesCount"
+                  (select COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Like' AND "commentId" = $1),
+                  (select COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" WHERE status = 'Dislike'  AND "commentId" = $1)
                   FROM "${TablesNames.ExtendedLikesCommentInfo}" AS like_comment
-                  FULL JOIN "${TablesNames.Users}" AS user_owner
+                  JOIN "${TablesNames.Users}" AS user_owner
                   ON like_comment."userOwnerId" = user_owner.id
                   WHERE like_comment."commentId" = $1 AND user_owner."userIsBanned" = false
                   GROUP BY like_comment.id, like_comment."userOwnerId", like_comment."status"`;
