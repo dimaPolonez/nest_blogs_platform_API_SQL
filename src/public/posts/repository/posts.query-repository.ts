@@ -286,15 +286,15 @@ export class PostsQueryRepository {
           },
           createdAt: field.createdAt,
           likesInfo: {
-            likesCount: field.likesCount,
-            dislikesCount: field.dislikesCount,
-            myStatus: field.status === null ? 'None' : field.status,
+            likesCount: +field.likesCount,
+            dislikesCount: +field.dislikesCount,
+            myStatus: field.status === null ? MyLikeStatus.None : field.status,
           },
         };
       });
 
     const allCount: number =
-      rawAllCommentToPost.lenght > 0 ? rawAllCommentToPost[0].allCount : 0;
+      rawAllCommentToPost.length > 0 ? +rawAllCommentToPost[0].allCount : 0;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 

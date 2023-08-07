@@ -64,9 +64,9 @@ export class CommentsQueryRepository {
       },
       createdAt: rawComment[0].createdAt,
       likesInfo: {
-        likesCount: commentLikes.length > 0 ? commentLikes[0].likesCount : 0,
+        likesCount: commentLikes.length > 0 ? +commentLikes[0].likesCount : 0,
         dislikesCount:
-          commentLikes.length > 0 ? commentLikes[0].dislikesCount : 0,
+          commentLikes.length > 0 ? +commentLikes[0].dislikesCount : 0,
         myStatus: userStatus,
       },
     };
