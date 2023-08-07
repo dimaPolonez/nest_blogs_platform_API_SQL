@@ -248,6 +248,16 @@ export class PostsQueryRepository {
     postID: string,
     queryAll: QueryCommentType,
   ): Promise<GetAllCommentsType> {
+    const text1 = `SELECT * FROM "${TablesNames.Posts}" WHERE id = $1`;
+
+    const values1 = [postID];
+
+    const rawPost = await this.dataSource.query(text1, values1);
+
+    if (rawPost.length < 1) {
+      throw new NotFoundException('blog not found');
+    }
+
     const text = `SELECT c.*,
                   (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" 
                   WHERE status = 'Like' AND "commentId" = c.id),

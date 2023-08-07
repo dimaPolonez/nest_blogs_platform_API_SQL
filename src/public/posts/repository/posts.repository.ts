@@ -106,7 +106,7 @@ export class PostsRepository {
     const text = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}" 
                   WHERE "blogId" = $1 AND "userId" = $2`;
 
-    const values = [userID, blogID];
+    const values = [blogID, userID];
 
     return await this.dataSource.query(text, values);
   }
