@@ -136,8 +136,8 @@ export class BlogsQueryRepository {
   async getAllBlogs(queryAll: QueryBlogType): Promise<GetAllBlogsType> {
     const text1 = `SELECT *,
                    (SELECT COUNT(*) as "allCount" FROM "${TablesNames.Blogs}" 
-                   WHERE "blogIsBanned" = false) 
-                   AND ("name" ILIKE '%${queryAll.searchNameTerm}%')
+                   WHERE "blogIsBanned" = false 
+                   AND ("name" ILIKE '%${queryAll.searchNameTerm}%'))
                    FROM "${TablesNames.Blogs}"
                    WHERE "blogIsBanned" = false 
                    AND ("name" ILIKE '%${queryAll.searchNameTerm}%')

@@ -144,7 +144,7 @@ export class BloggerQueryRepository {
     const text1 = `SELECT *,
                    (SELECT COUNT(*) as "allCount" FROM "${TablesNames.Blogs}" 
                    WHERE "userOwnerId" = $1 AND "blogIsBanned" = false 
-                   AND ("name" ILIKE '%${queryAll.searchNameTerm}%')
+                   AND ("name" ILIKE '%${queryAll.searchNameTerm}%'))
                    FROM "${TablesNames.Blogs}"
                    WHERE "userOwnerId" = $1 AND "blogIsBanned" = false 
                    AND ("name" ILIKE '%${queryAll.searchNameTerm}%')
