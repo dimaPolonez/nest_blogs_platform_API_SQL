@@ -21,12 +21,12 @@ export class CommentsQueryRepository {
     const text = `SELECT c.*,
                   (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}"
                   FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id
-                  WHERE status = 'Like' AND "commentId" = p.id AND u."userIsBanned" = false),
+                  WHERE status = 'Like' AND "commentId" = c.id AND u."userIsBanned" = false),
                   (SELECT COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}"
                   FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
-                  WHERE status = 'Dislike' AND "commentId" = p.id AND u."userIsBanned" = false),
+                  WHERE status = 'Dislike' AND "commentId" = c.id AND u."userIsBanned" = false),
                   (SELECT status FROM "${TablesNames.ExtendedLikesCommentInfo}" 
-                  WHERE "userOwnerId" = $1 AND "commentId" = p.id)
+                  WHERE "userOwnerId" = $1 AND "commentId" = c.id)
                   FROM "${TablesNames.Comments}" AS c
                   FULL JOIN "${TablesNames.Users}" AS u ON c."userOwnerId" = u.id
                   WHERE c.id = $2 AND u."userIsBanned" = false
