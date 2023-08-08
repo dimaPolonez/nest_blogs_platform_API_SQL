@@ -93,7 +93,7 @@ export class PostsController {
     );
   }
 
-  @UseGuards(QuestJwtAccessGuard)
+  /*  @UseGuards(QuestJwtAccessGuard)
   @Get()
   @HttpCode(HttpStatus.OK)
   async getAllPosts(
@@ -104,7 +104,7 @@ export class PostsController {
       req.user.userID,
       queryAll,
     );
-  }
+  }*/
 
   @UseGuards(QuestJwtAccessGuard)
   @Get(':id')

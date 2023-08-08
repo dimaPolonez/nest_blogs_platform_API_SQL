@@ -41,8 +41,8 @@ export class BlogsController {
     @Request() req,
     @Param('id', new ParseUUIDPipe()) blogID: string,
     @Query() queryAll: QueryPostOfBlogDto,
-  ): Promise<GetAllPostsOfBlogType> {
-    return await this.postQueryRepository.getAllPosts(
+  ) /*: Promise<GetAllPostsOfBlogType>*/ {
+    return await this.postQueryRepository.getAllPostsToBlog(
       req.user.userID,
       queryAll,
       blogID,
