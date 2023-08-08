@@ -17,14 +17,10 @@ import {
   GetAllPostsOfBlogType,
   GetBlogType,
 } from '../../core/models';
-import { PostsQueryRepository } from '../posts/repository/posts.query-repository';
 
 @Controller('blogs')
 export class BlogsController {
-  constructor(
-    protected postQueryRepository: PostsQueryRepository,
-    protected blogQueryRepository: BlogsQueryRepository,
-  ) {}
+  constructor(protected blogQueryRepository: BlogsQueryRepository) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -42,7 +38,7 @@ export class BlogsController {
     @Param('id', new ParseUUIDPipe()) blogID: string,
     @Query() queryAll: QueryPostOfBlogDto,
   ): Promise<GetAllPostsOfBlogType> {
-    return await this.postQueryRepository.getAllPosts(
+    return await this.blogQueryRepository.getAllPostsToBlog(
       req.user.userID,
       queryAll,
       blogID,

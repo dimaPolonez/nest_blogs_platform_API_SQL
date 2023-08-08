@@ -55,7 +55,7 @@ export class PostsRepository {
   ): Promise<CommentsTableType[]> {
     const text = `INSERT INTO "${TablesNames.Comments}"
                   ("userOwnerId", "userOwnerLogin","postId", "content") 
-                  VALUES($1, $2, $3, $4)`;
+                  VALUES($1, $2, $3, $4) RETURNING *`;
 
     const values = [userID, login, postID, content];
 
@@ -106,7 +106,7 @@ export class PostsRepository {
     const text = `SELECT * FROM "${TablesNames.BanAllUsersOfBlogInfo}" 
                   WHERE "blogId" = $1 AND "userId" = $2`;
 
-    const values = [userID, blogID];
+    const values = [blogID, userID];
 
     return await this.dataSource.query(text, values);
   }

@@ -1,58 +1,61 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import {
   GetCommentType,
   MyLikeStatus,
-  NewestLikesType,
+  TablesNames,
 } from '../../../core/models';
-import { CommentModel, CommentModelType } from '../../../core/entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CommentsQueryRepository {
   constructor(
-    @InjectModel(CommentModel.name)
-    private readonly CommentModel: Model<CommentModelType>,
+    @InjectDataSource()
+    protected dataSource: DataSource,
   ) {}
 
   async findCommentById(
     commentID: string,
     userID?: string,
   ): Promise<GetCommentType> {
-    const findCommentSmart: CommentModelType = await this.CommentModel.findById(
-      commentID,
-    );
+    const text = `SELECT c.*,
+                  (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}"
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id
+                  WHERE status = 'Like' AND "commentId" = c.id AND u."userIsBanned" = false),
+                  (SELECT COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}"
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
+                  WHERE status = 'Dislike' AND "commentId" = c.id AND u."userIsBanned" = false),
+                  (SELECT status FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE "userOwnerId" = $1 AND "commentId" = c.id)
+                  FROM "${TablesNames.Comments}" AS c
+                  FULL JOIN "${TablesNames.Users}" AS u ON c."userOwnerId" = u.id
+                  WHERE c.id = $2 AND u."userIsBanned" = false
+                  GROUP BY c.id, c."userOwnerId", c."userOwnerLogin", c."postId", 
+                  c."content", c."createdAt"`;
 
-    if (
-      !findCommentSmart ||
-      findCommentSmart.commentatorInfo.isBanned === true
-    ) {
+    const values = [userID === 'quest' ? commentID : userID, commentID];
+
+    const rawComment = await this.dataSource.query(text, values);
+
+    if (rawComment.length < 1) {
       throw new NotFoundException('comment not found');
     }
 
-    let userStatus = MyLikeStatus.None;
-
-    if (userID !== 'quest') {
-      const findUserLike: null | NewestLikesType =
-        findCommentSmart.likesInfo.newestLikes.find((l) => l.userId === userID);
-
-      if (findUserLike) {
-        userStatus = findUserLike.myStatus;
-      }
-    }
-
     return {
-      id: findCommentSmart.id,
-      content: findCommentSmart.content,
+      id: rawComment[0].id,
+      content: rawComment[0].content,
       commentatorInfo: {
-        userId: findCommentSmart.commentatorInfo.userId,
-        userLogin: findCommentSmart.commentatorInfo.userLogin,
+        userId: rawComment[0].userOwnerId,
+        userLogin: rawComment[0].userOwnerLogin,
       },
-      createdAt: findCommentSmart.createdAt,
+      createdAt: rawComment[0].createdAt,
       likesInfo: {
-        likesCount: findCommentSmart.likesInfo.likesCount,
-        dislikesCount: findCommentSmart.likesInfo.dislikesCount,
-        myStatus: userStatus,
+        likesCount: +rawComment[0].likesCount,
+        dislikesCount: +rawComment[0].dislikesCount,
+        myStatus:
+          rawComment[0].status === null
+            ? MyLikeStatus.None
+            : rawComment[0].status,
       },
     };
   }

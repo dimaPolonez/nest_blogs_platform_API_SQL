@@ -81,7 +81,7 @@ export class CommentsRepository {
 
   async updateRawCommentById(commentID: string, content: string) {
     const text = `UPDATE "${TablesNames.Comments}" SET "content" = $1 
-                  WHERE "commentID" = $2`;
+                  WHERE id = $2`;
 
     const values = [content, commentID];
 
@@ -89,7 +89,7 @@ export class CommentsRepository {
   }
 
   async deleteRawCommentById(commentID: string) {
-    const text = `DELETE FROM "${TablesNames.Comments}" WHERE "id" = $1`;
+    const text = `DELETE FROM "${TablesNames.Comments}" WHERE id = $1`;
 
     const values = [commentID];
 

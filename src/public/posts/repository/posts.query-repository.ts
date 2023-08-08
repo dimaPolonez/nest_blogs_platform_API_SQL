@@ -42,17 +42,32 @@ export class PostsQueryRepository {
   }
 
   async findPostById(postID: string, userID?: string): Promise<GetPostType> {
-    const text = `SELECT Posts.*, Blogs."blogIsBanned" 
-                   FROM "${TablesNames.Posts}" AS Posts
-                   FULL JOIN "${TablesNames.Blogs}" AS Blogs
-                   ON Posts."blogId" = Blogs.id
-                   WHERE Posts.id = $1`;
+    const text = `SELECT p.*,
+                  (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesPostInfo}"
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id
+                  WHERE status = 'Like' AND "postId" = p.id AND u."userIsBanned" = false),
+                  (SELECT COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesPostInfo}"
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
+                  WHERE status = 'Dislike' AND "postId" = p.id AND u."userIsBanned" = false),
+                  (SELECT status FROM "${TablesNames.ExtendedLikesPostInfo}" 
+                  WHERE "userOwnerId" = $1 AND "postId" = p.id),
+                  (SELECT ARRAY_TO_JSON(ARRAY( SELECT ROW_TO_JSON(r) FROM 
+                  (SELECT "addedAt", "userOwnerId" AS "userId", "userOwnerLogin" AS "login"
+                  FROM "${TablesNames.ExtendedLikesPostInfo}"
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
+                  WHERE status = 'Like' AND "postId" = p.id AND u."userIsBanned" = false
+                  ORDER BY "addedAt" DESC LIMIT 3) AS r)) AS "newestLikes")
+                  FROM "${TablesNames.Posts}" AS p
+                  FULL JOIN "${TablesNames.Blogs}" AS b ON p."blogId" = b.id
+                  WHERE p.id = $2 AND b."blogIsBanned" = false
+                  GROUP BY p.id, p."blogId", p."blogName", p."title", 
+                  p."shortDescription", p."content", p."createdAt"`;
 
-    const values = [postID];
+    const values = [userID === 'quest' ? postID : userID, postID];
 
     const rawPost = await this.dataSource.query(text, values);
 
-    if (rawPost.length < 1 || rawPost[0].blogIsBanned === true) {
+    if (rawPost.length < 1) {
       throw new NotFoundException('post not found');
     }
 
@@ -65,167 +80,54 @@ export class PostsQueryRepository {
       blogName: rawPost[0].blogName,
       createdAt: rawPost[0].createdAt,
       extendedLikesInfo: {
-        likesCount: 0,
-        dislikesCount: 0,
-        myStatus: MyLikeStatus.None,
-        newestLikes: [],
+        likesCount: +rawPost[0].likesCount,
+        dislikesCount: +rawPost[0].dislikesCount,
+        myStatus:
+          rawPost[0].status === null ? MyLikeStatus.None : rawPost[0].status,
+        newestLikes: rawPost[0].newestLikes,
       },
     };
-
-    /*
-    let userStatus = MyLikeStatus.None;
-
-    if (userID !== 'quest') {
-      const findUserLike: null | NewestLikesType =
-        findPostSmart.extendedLikesInfo.newestLikes.find(
-          (v) => v.userId === userID,
-        );
-
-      if (findUserLike) {
-        userStatus = findUserLike.myStatus;
-      }
-    }
-    let newestLikesArray = [];
-
-    if (findPostSmart.extendedLikesInfo.newestLikes.length > 0) {
-      let newestLikes: NewestLikesType[] | [] =
-        findPostSmart.extendedLikesInfo.newestLikes.filter(
-          (v) => v.myStatus === MyLikeStatus.Like && v.isBanned === false,
-        );
-
-      newestLikes.sort(function (a: NewestLikesType, b: NewestLikesType) {
-        return a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0;
-      });
-
-      newestLikes = newestLikes.slice(0, 3);
-
-      newestLikesArray = newestLikes.map((v: NewestLikesType) => {
-        return {
-          userId: v.userId,
-          login: v.login,
-          addedAt: v.addedAt,
-        };
-      });
-    }*/
   }
 
   async getAllPosts(
     userID: string,
     queryAll: QueryPostType,
-    blogID?: string,
   ): Promise<GetAllPostsType> {
-    const text2 = `SELECT Posts.*, Blogs."blogIsBanned" 
-                   FROM "${TablesNames.Posts}" AS Posts
-                   FULL JOIN "${TablesNames.Blogs}" AS Blogs
-                   ON Posts."blogId" = Blogs.id`;
+    const mockId = 'fabf9d5e-4240-4461-8614-737e801ee9c3';
 
-    const rawAllPosts = await this.dataSource.query(text2);
+    const text = `SELECT p.*,
+                  (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesPostInfo}"
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id
+                  WHERE status = 'Like' AND "postId" = p.id AND u."userIsBanned" = false),
+                  (SELECT COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesPostInfo}"
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
+                  WHERE status = 'Dislike' AND "postId" = p.id AND u."userIsBanned" = false),
+                  (SELECT status FROM "${TablesNames.ExtendedLikesPostInfo}" 
+                  WHERE "userOwnerId" = $1 AND "postId" = p.id),
+                  (SELECT COUNT(*) as "allCount" FROM "${TablesNames.Posts}" 
+                  FULL JOIN "${TablesNames.Blogs}" AS b ON "blogId" = b.id
+                  WHERE b."blogIsBanned" = false),
+                  (SELECT ARRAY_TO_JSON(ARRAY( SELECT ROW_TO_JSON(r) FROM (SELECT "addedAt", "userOwnerId" AS "userId", "userOwnerLogin" AS "login"
+                  FROM "${TablesNames.ExtendedLikesPostInfo}"
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
+                  WHERE status = 'Like' AND "postId" = p.id AND u."userIsBanned" = false
+                  ORDER BY "addedAt" DESC LIMIT 3) AS r)) AS "newestLikes")
+                  FROM "${TablesNames.Posts}" AS p
+                  FULL JOIN "${TablesNames.Blogs}" AS b ON p."blogId" = b.id
+                  WHERE b."blogIsBanned" = false
+                  GROUP BY p.id, p."blogId", p."blogName", p."title", p."shortDescription", p."content", p."createdAt"
+                  ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                  LIMIT $2 OFFSET $3`;
 
-    const mappedAllPosts: GetPostType[] = rawAllPosts.map((field) => {
-      const userStatus = MyLikeStatus.None;
-      const newestLikesArray: NewestLikesToBloggerType[] = [];
-      const likesCount = 0;
-      const dislikesCount = 0;
+    const values = [
+      userID === 'quest' ? mockId : userID,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
 
-      if (blogID && field.blogId === blogID && field.blogIsBanned === false) {
-        return {
-          id: field.id,
-          title: field.title,
-          shortDescription: field.shortDescription,
-          content: field.content,
-          blogId: field.blogId,
-          blogName: field.blogName,
-          createdAt: field.createdAt,
-          extendedLikesInfo: {
-            likesCount: likesCount,
-            dislikesCount: dislikesCount,
-            myStatus: userStatus,
-            newestLikes: newestLikesArray,
-          },
-        };
-      }
-      if (field.blogIsBanned === false) {
-        return {
-          id: field.id,
-          title: field.title,
-          shortDescription: field.shortDescription,
-          content: field.content,
-          blogId: field.blogId,
-          blogName: field.blogName,
-          createdAt: field.createdAt,
-          extendedLikesInfo: {
-            likesCount: likesCount,
-            dislikesCount: dislikesCount,
-            myStatus: userStatus,
-            newestLikes: newestLikesArray,
-          },
-        };
-      }
-    });
+    const rawAllPost = await this.dataSource.query(text, values);
 
-    const skip = this.skippedObject(queryAll.pageNumber, queryAll.pageSize);
-    const limit = queryAll.pageSize;
-    const sortBy = queryAll.sortBy;
-    const sortDirections = queryAll.sortDirection;
-
-    mappedAllPosts.sort((a: GetPostType, b: GetPostType) => {
-      if (a[sortBy] < b[sortBy]) {
-        return sortDirections === 'asc' ? -1 : 1;
-      }
-      if (a[sortBy] > b[sortBy]) {
-        return sortDirections === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-
-    const paginationFullPosts = mappedAllPosts.slice(skip, skip + limit);
-
-    const allCount: number = mappedAllPosts.length;
-    const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
-
-    return {
-      pagesCount: pagesCount,
-      page: queryAll.pageNumber,
-      pageSize: queryAll.pageSize,
-      totalCount: allCount,
-      items: paginationFullPosts,
-    };
-
-    /*const allMapsPosts: GetPostType[] = allPosts.map((field) => {
-      let userStatus = MyLikeStatus.None;
-
-      if (userID !== 'quest') {
-        const findUserLike: null | NewestLikesType =
-          field.extendedLikesInfo.newestLikes.find((v) => v.userId === userID);
-
-        if (findUserLike) {
-          userStatus = findUserLike.myStatus;
-        }
-      }
-
-      let newestLikesArray = [];
-
-      if (field.extendedLikesInfo.newestLikes.length > 0) {
-        let newestLikes: NewestLikesType[] | [] =
-          field.extendedLikesInfo.newestLikes.filter(
-            (v) => v.myStatus === MyLikeStatus.Like && v.isBanned === false,
-          );
-
-        newestLikes.sort(function (a: NewestLikesType, b: NewestLikesType) {
-          return a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0;
-        });
-
-        newestLikes = newestLikes.slice(0, 3);
-
-        newestLikesArray = newestLikes.map((v: NewestLikesType) => {
-          return {
-            userId: v.userId,
-            login: v.login,
-            addedAt: v.addedAt,
-          };
-        });
-      }
-
+    const mappedRawAllPost: GetPostType[] = await rawAllPost.map((field) => {
       return {
         id: field.id,
         title: field.title,
@@ -235,57 +137,16 @@ export class PostsQueryRepository {
         blogName: field.blogName,
         createdAt: field.createdAt,
         extendedLikesInfo: {
-          likesCount: field.extendedLikesInfo.likesCount,
-          dislikesCount: field.extendedLikesInfo.dislikesCount,
-          myStatus: userStatus,
-          newestLikes: newestLikesArray,
-        },
-      };
-    });*/
-  }
-  async getAllCommentsOfPost(
-    userID: string,
-    postID: string,
-    queryAll: QueryCommentType,
-  ): Promise<GetAllCommentsType> {
-    const allComments: CommentModelType[] = await this.CommentModel.find({
-      $and: [{ postId: postID }, { 'commentatorInfo.isBanned': false }],
-    })
-      .skip(this.skippedObject(queryAll.pageNumber, queryAll.pageSize))
-      .limit(queryAll.pageSize)
-      .sort({ [queryAll.sortBy]: this.sortObject(queryAll.sortDirection) });
-
-    const allMapsComments: GetCommentType[] = allComments.map((field) => {
-      let userStatus = MyLikeStatus.None;
-
-      if (userID !== 'quest') {
-        const findUserLike: null | NewestLikesType =
-          field.likesInfo.newestLikes.find((v) => v.userId === userID);
-
-        if (findUserLike) {
-          userStatus = findUserLike.myStatus;
-        }
-      }
-
-      return {
-        id: field.id,
-        content: field.content,
-        commentatorInfo: {
-          userId: field.commentatorInfo.userId,
-          userLogin: field.commentatorInfo.userLogin,
-        },
-        createdAt: field.createdAt,
-        likesInfo: {
-          likesCount: field.likesInfo.likesCount,
-          dislikesCount: field.likesInfo.dislikesCount,
-          myStatus: userStatus,
+          likesCount: +field.likesCount,
+          dislikesCount: +field.dislikesCount,
+          myStatus: field.status === null ? MyLikeStatus.None : field.status,
+          newestLikes: field.newestLikes,
         },
       };
     });
 
-    const allCount: number = await this.CommentModel.countDocuments({
-      postId: postID,
-    });
+    const allCount: number =
+      rawAllPost.length > 0 ? +rawAllPost[0].allCount : 0;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
@@ -294,7 +155,79 @@ export class PostsQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: allMapsComments,
+      items: mappedRawAllPost,
+    };
+  }
+  async getAllCommentsOfPost(
+    userID: string,
+    postID: string,
+    queryAll: QueryCommentType,
+  ): Promise<GetAllCommentsType> {
+    const text1 = `SELECT * FROM "${TablesNames.Posts}" WHERE id = $1`;
+
+    const values1 = [postID];
+
+    const rawPost = await this.dataSource.query(text1, values1);
+
+    if (rawPost.length < 1) {
+      throw new NotFoundException('post not found');
+    }
+
+    const text = `SELECT c.*,
+                  (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE status = 'Like' AND "commentId" = c.id),
+                  (SELECT COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE status = 'Dislike' AND "commentId" = c.id),
+                  (SELECT status FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE "userOwnerId" = $1 AND "commentId" = c.id),
+                  (SELECT COUNT(*) as "allCount" FROM "${TablesNames.Comments}" 
+                  FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
+                  WHERE "postId" = $2 AND u."userIsBanned" = false)
+                  FROM "${TablesNames.Comments}" AS c
+                  FULL JOIN "${TablesNames.Users}" AS u ON c."userOwnerId" = u.id
+                  WHERE c."postId" = $2 AND u."userIsBanned" = false
+                  GROUP BY c.id, c."userOwnerId", c."userOwnerLogin", c."postId", c."content", c."createdAt"
+                  ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                  LIMIT $3 OFFSET $4`;
+
+    const values = [
+      userID === 'quest' ? postID : userID,
+      postID,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
+
+    const rawAllCommentToPost = await this.dataSource.query(text, values);
+
+    const mappedRawAllCommentToPost: GetCommentType[] =
+      await rawAllCommentToPost.map((field) => {
+        return {
+          id: field.id,
+          content: field.content,
+          commentatorInfo: {
+            userId: field.userOwnerId,
+            userLogin: field.userOwnerLogin,
+          },
+          createdAt: field.createdAt,
+          likesInfo: {
+            likesCount: +field.likesCount,
+            dislikesCount: +field.dislikesCount,
+            myStatus: field.status === null ? MyLikeStatus.None : field.status,
+          },
+        };
+      });
+
+    const allCount: number =
+      rawAllCommentToPost.length > 0 ? +rawAllCommentToPost[0].allCount : 0;
+
+    const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
+
+    return {
+      pagesCount: pagesCount,
+      page: queryAll.pageNumber,
+      pageSize: queryAll.pageSize,
+      totalCount: allCount,
+      items: mappedRawAllCommentToPost,
     };
   }
   async getCommentOfPost(

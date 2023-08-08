@@ -43,7 +43,10 @@ export class SuperAdminQueryRepository {
   async getAllBlogsToAdmin(
     queryAll: QueryBlogType,
   ): Promise<GetAllBlogsAdminType> {
-    const text1 = `SELECT * FROM "${TablesNames.Blogs}"
+    const text1 = `SELECT *,
+                   (SELECT COUNT(*) as "allCount" FROM "${TablesNames.Blogs}" 
+                   WHERE "name" ILIKE '%${queryAll.searchNameTerm}%')
+                   FROM "${TablesNames.Blogs}"
                    WHERE "name" ILIKE '%${queryAll.searchNameTerm}%' 
                    ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
                    LIMIT $1 OFFSET $2`;
@@ -53,17 +56,7 @@ export class SuperAdminQueryRepository {
       this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
     ];
 
-    const rawAllBlogs: BlogsTableType[] = await this.dataSource.query(
-      text1,
-      values,
-    );
-
-    const text2 = `SELECT * FROM "${TablesNames.Blogs}" WHERE "name" 
-                   ILIKE '%${queryAll.searchNameTerm}%'`;
-
-    const rawAllBlogsCount: BlogsTableType[] = await this.dataSource.query(
-      text2,
-    );
+    const rawAllBlogs = await this.dataSource.query(text1, values);
 
     const mappedAllBlogs: GetBlogAdminType[] = rawAllBlogs.map(
       (field: BlogsTableType) => {
@@ -86,7 +79,8 @@ export class SuperAdminQueryRepository {
       },
     );
 
-    const allCount: number = rawAllBlogsCount.length;
+    const allCount: number =
+      rawAllBlogs.length > 0 ? +rawAllBlogs[0].allCount : 0;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
@@ -114,31 +108,24 @@ export class SuperAdminQueryRepository {
   ): Promise<GetAllUsersAdminType> {
     const banStatusFilter = await this.userBannedChecked(queryAll.banStatus);
 
-    const text1 = `SELECT * FROM "${TablesNames.Users}"
-          WHERE ${banStatusFilter}
-          ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
-          OR "email" ILIKE '%${queryAll.searchEmailTerm}%')
-          ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
-          LIMIT $1 OFFSET $2`;
+    const text1 = `SELECT *,
+                   (SELECT COUNT(*) as "allCount" FROM "${TablesNames.Users}" 
+                   WHERE ${banStatusFilter}
+                   ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
+                   OR "email" ILIKE '%${queryAll.searchEmailTerm}%'))
+                   FROM "${TablesNames.Users}"
+                   WHERE ${banStatusFilter}
+                   ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
+                   OR "email" ILIKE '%${queryAll.searchEmailTerm}%')
+                   ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                   LIMIT $1 OFFSET $2`;
 
     const values = [
       queryAll.pageSize,
       this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
     ];
 
-    const rawAllUsers: UsersTableType[] = await this.dataSource.query(
-      text1,
-      values,
-    );
-
-    const text2 = `SELECT * FROM "${TablesNames.Users}"
-          WHERE ${banStatusFilter}
-          ("login" ILIKE '%${queryAll.searchLoginTerm}%' 
-          OR "email" ILIKE '%${queryAll.searchEmailTerm}%')`;
-
-    const rawAllUsersCount: UsersTableType[] = await this.dataSource.query(
-      text2,
-    );
+    const rawAllUsers = await this.dataSource.query(text1, values);
 
     const mappedAllUsers: GetUserAdminType[] = rawAllUsers.map((field) => {
       return {
@@ -154,7 +141,8 @@ export class SuperAdminQueryRepository {
       };
     });
 
-    const allCount: number = rawAllUsersCount.length;
+    const allCount: number =
+      rawAllUsers.length > 0 ? +rawAllUsers[0].allCount : 0;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
