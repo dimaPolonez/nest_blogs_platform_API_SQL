@@ -26,7 +26,7 @@ export class CommentsQueryRepository {
                   FULL JOIN "${TablesNames.Users}" AS u ON "userOwnerId" = u.id 
                   WHERE status = 'Dislike' AND "commentId" = p.id AND u."userIsBanned" = false),
                   (SELECT status FROM "${TablesNames.ExtendedLikesCommentInfo}" 
-                  WHERE "userOwnerId" = $1 AND "commentId" = p.id),
+                  WHERE "userOwnerId" = $1 AND "commentId" = p.id)
                   FROM "${TablesNames.Comments}" AS c
                   FULL JOIN "${TablesNames.Users}" AS u ON c."userOwnerId" = u.id
                   WHERE c.id = $2 AND u."userIsBanned" = false
@@ -50,8 +50,8 @@ export class CommentsQueryRepository {
       },
       createdAt: rawComment[0].createdAt,
       likesInfo: {
-        likesCount: rawComment[0].likesCount,
-        dislikesCount: rawComment[0].dislikesCount,
+        likesCount: +rawComment[0].likesCount,
+        dislikesCount: +rawComment[0].dislikesCount,
         myStatus:
           rawComment[0].status === null
             ? MyLikeStatus.None
