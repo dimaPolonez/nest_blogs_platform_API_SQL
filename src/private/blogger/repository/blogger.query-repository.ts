@@ -274,96 +274,62 @@ export class BloggerQueryRepository {
     userID: string,
     queryAll: QueryCommentType,
   ): Promise<GetAllCommentsToBloggerType> {
-    const allBlogs: BlogModelType[] = await this.BlogModel.find({
-      'blogOwnerInfo.userId': userID,
+    const text = `SELECT c.*,
+                  (SELECT COUNT(*) AS "likesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE status = 'Like' AND "commentId" = c.id),
+                  (SELECT COUNT(*)  AS "dislikesCount" FROM "${TablesNames.ExtendedLikesCommentInfo}" 
+                  WHERE status = 'Dislike' AND "commentId" = c.id),
+                  (SELECT COUNT(*) as "allCount" FROM "${TablesNames.Comments}" AS c
+                  FULL JOIN "${TablesNames.Posts}" AS p ON c."postId" = p.id
+                  FULL JOIN "${TablesNames.Blogs}" AS b ON p."blogId" = b.id
+                  FULL JOIN "${TablesNames.Users}" AS u ON c."userOwnerId" = u.id
+                  WHERE (b."userOwnerId" = $1 AND p."blogId" = b.id 
+                  AND c."postId" = p.id) AND u."userIsBanned" = false),
+                  p.title, p."blogId", p."blogName"
+                  FROM "${TablesNames.Comments}" AS c
+                  FULL JOIN "${TablesNames.Posts}" AS p ON c."postId" = p.id
+                  FULL JOIN "${TablesNames.Blogs}" AS b ON p."blogId" = b.id
+                  FULL JOIN "${TablesNames.Users}" AS u ON c."userOwnerId" = u.id
+                  WHERE (b."userOwnerId" = $1 AND p."blogId" = b.id 
+                  AND c."postId" = p.id) AND u."userIsBanned" = false
+                  GROUP BY c.id, c."userOwnerId", c."userOwnerLogin", c."postId", 
+                  c."content", c."createdAt", p.title, p."blogId", p."blogName"
+                  ORDER BY "${queryAll.sortBy}" ${queryAll.sortDirection}
+                  LIMIT $2 OFFSET $3`;
+
+    const values = [
+      userID,
+      queryAll.pageSize,
+      this.skippedObject(queryAll.pageNumber, queryAll.pageSize),
+    ];
+
+    const allCommentsToBlogger = await this.dataSource.query(text, values);
+
+    const mappedAllCommentsToBlogger = await allCommentsToBlogger.map((v) => {
+      return {
+        id: v.id,
+        content: v.content,
+        commentatorInfo: {
+          userId: v.userOwnerId,
+          userLogin: v.userOwnerLogin,
+        },
+        createdAt: v.createdAt,
+        likesInfo: {
+          likesCount: +v.likesCount,
+          dislikesCount: +v.dislikesCount,
+          myStatus: MyLikeStatus.None,
+        },
+        postInfo: {
+          id: v.postId,
+          title: v.title,
+          blogId: v.blogId,
+          blogName: v.blogName,
+        },
+      };
     });
 
-    const blogIdArray = [];
-
-    allBlogs.map((v) => blogIdArray.push(v.id));
-
-    const allPostsArray = [];
-
-    if (blogIdArray) {
-      for (let i = 0; i < blogIdArray.length; i++) {
-        const allPostsOfBlog: PostModelType[] = await this.PostModel.find({
-          blogId: blogIdArray[i],
-        });
-
-        allPostsOfBlog.map((v) =>
-          allPostsArray.push({
-            blogId: v.blogId,
-            blogName: v.blogName,
-            title: v.title,
-            id: v.id,
-          }),
-        );
-      }
-    }
-
-    const fullCommentsToBlogger = [];
-
-    if (allPostsArray) {
-      for (let i = 0; i < allPostsArray.length; i++) {
-        const allComments: CommentModelType[] = await this.CommentModel.find({
-          $and: [
-            { postId: allPostsArray[i].id },
-            { 'commentatorInfo.isBanned': false },
-          ],
-        });
-
-        allComments.map((v: CommentModelType) => {
-          let userStatus = MyLikeStatus.None;
-
-          const findUserLike: null | NewestLikesType =
-            v.likesInfo.newestLikes.find((v) => v.userId === userID);
-
-          if (findUserLike) {
-            userStatus = findUserLike.myStatus;
-          }
-
-          fullCommentsToBlogger.push({
-            id: v.id,
-            content: v.content,
-            createdAt: v.createdAt,
-            commentatorInfo: {
-              userId: v.commentatorInfo.userId,
-              userLogin: v.commentatorInfo.userLogin,
-            },
-            likesInfo: {
-              likesCount: v.likesInfo.likesCount,
-              dislikesCount: v.likesInfo.dislikesCount,
-              myStatus: userStatus,
-            },
-            postInfo: allPostsArray[i],
-          });
-        });
-      }
-    }
-
-    const skip = this.skippedObject(queryAll.pageNumber, queryAll.pageSize);
-    const limit = queryAll.pageSize;
-    const sortBy = queryAll.sortBy;
-    const sortDirections = queryAll.sortDirection;
-
-    fullCommentsToBlogger.sort(
-      (a: GetAllCommentOfPostType, b: GetAllCommentOfPostType) => {
-        if (a[sortBy] < b[sortBy]) {
-          return sortDirections === 'asc' ? -1 : 1;
-        }
-        if (a[sortBy] > b[sortBy]) {
-          return sortDirections === 'asc' ? 1 : -1;
-        }
-        return 0;
-      },
-    );
-
-    const paginationFullCommentsToBlogger = fullCommentsToBlogger.slice(
-      skip,
-      skip + limit,
-    );
-
-    const allCount: number = fullCommentsToBlogger.length;
+    const allCount: number =
+      allCommentsToBlogger.length > 0 ? +allCommentsToBlogger[0].allCount : 0;
 
     const pagesCount: number = Math.ceil(allCount / queryAll.pageSize);
 
@@ -372,7 +338,7 @@ export class BloggerQueryRepository {
       page: queryAll.pageNumber,
       pageSize: queryAll.pageSize,
       totalCount: allCount,
-      items: paginationFullCommentsToBlogger,
+      items: mappedAllCommentsToBlogger,
     };
   }
 
