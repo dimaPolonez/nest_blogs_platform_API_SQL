@@ -1,4 +1,5 @@
 # Проект: NestBlogPlatform API SQL
+## Ссылка: https://nest-blogs-platform-api-sql.vercel.app/
 ### О проекте
 Реализация API Блогера, со следующим функционалом:
 <ol>
