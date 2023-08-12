@@ -1,6 +1,5 @@
 import { CONFIG } from './config/config';
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { BlogsModule } from './public/blogs/blogs.module';
 import { PostsModule } from './public/posts/posts.module';
 import { CommentsModule } from './public/comments/comments.module';
@@ -49,7 +48,6 @@ const strategies = [
       synchronize: false,
     }),
     CONFIG.START_MODULE,
-    MongooseModule.forRoot(CONFIG.MONGO_DB),
     ...modules,
   ],
   controllers: [AppController],

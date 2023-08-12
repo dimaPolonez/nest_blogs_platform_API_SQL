@@ -1,29 +1,7 @@
-export type SessionUserType = {
-  deviceId: string;
-  ip: string;
-  title: string;
-  expiresTime: string;
-  lastActiveDate: string;
-};
-
 export type GetSessionUserType = {
   deviceId: string;
   ip: string;
   title: string;
-  lastActiveDate: string;
-};
-
-export type SessionUserDTOType = {
-  userID: string;
-  ip: string;
-  nameDevice: string;
-  expiresTime: string;
-  lastActiveDate: string;
-};
-
-export type SessionUserUpdateDTOType = {
-  deviceID: string;
-  expiresTime: string;
   lastActiveDate: string;
 };
 

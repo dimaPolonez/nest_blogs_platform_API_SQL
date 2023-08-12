@@ -1,16 +1,5 @@
 import { CqrsModule } from '@nestjs/cqrs';
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import {
-  BlogModel,
-  BlogModelSchema,
-  CommentModel,
-  CommentModelSchema,
-  PostModel,
-  PostModelSchema,
-  UserModel,
-  UserModelSchema,
-} from '../../core/entity';
 import { SuperAdminController } from './super-admin.controller';
 import {
   BanBlogUseCase,
@@ -39,15 +28,7 @@ const useCases = [
 ];
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([
-      { name: BlogModel.name, schema: BlogModelSchema },
-      { name: PostModel.name, schema: PostModelSchema },
-      { name: UserModel.name, schema: UserModelSchema },
-      { name: CommentModel.name, schema: CommentModelSchema },
-    ]),
-    ...modules,
-  ],
+  imports: [...modules],
   controllers: [SuperAdminController],
   providers: [
     SuperAdminRepository,

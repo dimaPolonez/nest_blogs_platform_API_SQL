@@ -3,40 +3,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import {
   AllBanUsersInfoType,
-  BanAllUsersOfBlogInfoType,
   BlogsTableType,
-  ExtendedLikesPostInfoType,
   GetAllBlogsType,
-  GetAllCommentOfPostType,
   GetAllCommentsToBloggerType,
-  GetAllPostsOfBlogType,
   GetAllPostsToBloggerType,
-  GetAllPostsType,
   getBanAllUserOfBlogType,
   GetBlogType,
-  GetPostToBloggerType,
   GetPostType,
   MyLikeStatus,
-  NewestLikesToBloggerType,
-  NewestLikesType,
-  PostsTableType,
   QueryBlogType,
   QueryCommentType,
   QueryPostType,
   TablesNames,
 } from '../../../core/models';
-import {
-  BlogModel,
-  BlogModelType,
-  CommentModel,
-  CommentModelType,
-  PostModel,
-  PostModelType,
-} from '../../../core/entity';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
@@ -45,98 +26,11 @@ export class BloggerQueryRepository {
   constructor(
     @InjectDataSource()
     protected dataSource: DataSource,
-    @InjectModel(BlogModel.name)
-    private readonly BlogModel: Model<BlogModelType>,
-    @InjectModel(PostModel.name)
-    private readonly PostModel: Model<PostModelType>,
-    @InjectModel(CommentModel.name)
-    private readonly CommentModel: Model<CommentModelType>,
   ) {}
 
-  sortObject(sortDir: string) {
-    return sortDir === 'desc' ? -1 : 1;
-  }
   skippedObject(pageNum: number, pageSize: number) {
     return (pageNum - 1) * pageSize;
   }
-  async findBlogById(blogID: string): Promise<GetBlogType> {
-    const findBlogSmart: BlogModelType | null = await this.BlogModel.findById(
-      blogID,
-    );
-
-    if (!findBlogSmart) {
-      throw new NotFoundException();
-    }
-
-    return {
-      id: findBlogSmart.id,
-      name: findBlogSmart.name,
-      description: findBlogSmart.description,
-      websiteUrl: findBlogSmart.websiteUrl,
-      createdAt: findBlogSmart.createdAt,
-      isMembership: findBlogSmart.isMembership,
-    };
-  }
-
-  async findPostById(postID: string, userID?: string): Promise<GetPostType> {
-    const findPostSmart = await this.PostModel.findById(postID);
-
-    if (!findPostSmart || findPostSmart.blogIsBanned === true) {
-      throw new NotFoundException('post not found');
-    }
-
-    let userStatus = MyLikeStatus.None;
-
-    if (userID !== 'quest') {
-      const findUserLike: null | NewestLikesType =
-        findPostSmart.extendedLikesInfo.newestLikes.find(
-          (v) => v.userId === userID,
-        );
-
-      if (findUserLike) {
-        userStatus = findUserLike.myStatus;
-      }
-    }
-    let newestLikesArray = [];
-
-    if (findPostSmart.extendedLikesInfo.newestLikes.length > 0) {
-      let newestLikes: NewestLikesType[] | [] =
-        findPostSmart.extendedLikesInfo.newestLikes.filter(
-          (v) => v.myStatus === MyLikeStatus.Like,
-        );
-
-      newestLikes.sort(function (a: NewestLikesType, b: NewestLikesType) {
-        return a.addedAt < b.addedAt ? 1 : a.addedAt > b.addedAt ? -1 : 0;
-      });
-
-      newestLikes = newestLikes.slice(0, 3);
-
-      newestLikesArray = newestLikes.map((v: NewestLikesType) => {
-        return {
-          userId: v.userId,
-          login: v.login,
-          addedAt: v.addedAt,
-        };
-      });
-    }
-
-    return {
-      id: findPostSmart.id,
-      title: findPostSmart.title,
-      shortDescription: findPostSmart.shortDescription,
-      content: findPostSmart.content,
-      blogId: findPostSmart.blogId,
-      blogName: findPostSmart.blogName,
-      createdAt: findPostSmart.createdAt,
-      extendedLikesInfo: {
-        likesCount: findPostSmart.extendedLikesInfo.likesCount,
-        dislikesCount: findPostSmart.extendedLikesInfo.dislikesCount,
-        myStatus: userStatus,
-        newestLikes: newestLikesArray,
-      },
-    };
-  }
-
   async getAllBlogsToBlogger(
     blogerId: string,
     queryAll: QueryBlogType,

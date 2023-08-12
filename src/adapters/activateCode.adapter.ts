@@ -2,9 +2,6 @@ import { v4 } from 'uuid';
 import { add } from 'date-fns';
 
 export class ActiveCodeAdapter {
-  public async generateId() {
-    return v4();
-  }
   public async createCode() {
     return {
       codeActivated: v4(),

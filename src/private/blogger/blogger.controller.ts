@@ -27,7 +27,6 @@ import {
 import {
   GetAllBlogsType,
   GetAllCommentsToBloggerType,
-  GetAllPostsOfBlogType,
   GetAllPostsToBloggerType,
   getBanAllUserOfBlogType,
   GetBlogType,

@@ -1,25 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import {
   GetAllCommentsType,
   GetAllPostsType,
-  GetCommentOfPostType,
   GetCommentType,
   GetPostType,
   MyLikeStatus,
-  NewestLikesToBloggerType,
-  NewestLikesType,
   QueryCommentType,
   QueryPostType,
   TablesNames,
 } from '../../../core/models';
-import {
-  CommentModel,
-  CommentModelType,
-  PostModel,
-  PostModelType,
-} from '../../../core/entity';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
@@ -28,15 +17,8 @@ export class PostsQueryRepository {
   constructor(
     @InjectDataSource()
     protected dataSource: DataSource,
-    @InjectModel(PostModel.name)
-    private readonly PostModel: Model<PostModelType>,
-    @InjectModel(CommentModel.name)
-    private readonly CommentModel: Model<CommentModelType>,
   ) {}
 
-  sortObject(sortDir: string) {
-    return sortDir === 'desc' ? -1 : 1;
-  }
   skippedObject(pageNum: number, pageSize: number) {
     return (pageNum - 1) * pageSize;
   }
@@ -228,42 +210,6 @@ export class PostsQueryRepository {
       pageSize: queryAll.pageSize,
       totalCount: allCount,
       items: mappedRawAllCommentToPost,
-    };
-  }
-  async getCommentOfPost(
-    commentID: string,
-    userID?: string,
-  ): Promise<GetCommentOfPostType> {
-    const findCommentSmart = await this.CommentModel.findById(commentID);
-
-    if (!findCommentSmart) {
-      throw new NotFoundException('comment not found');
-    }
-
-    let userStatus = MyLikeStatus.None;
-
-    if (userID !== 'quest') {
-      const findUserLike: null | NewestLikesType =
-        findCommentSmart.likesInfo.newestLikes.find((l) => l.userId === userID);
-
-      if (findUserLike) {
-        userStatus = findUserLike.myStatus;
-      }
-    }
-
-    return {
-      id: findCommentSmart.id,
-      content: findCommentSmart.content,
-      commentatorInfo: {
-        userId: findCommentSmart.commentatorInfo.userId,
-        userLogin: findCommentSmart.commentatorInfo.userLogin,
-      },
-      createdAt: findCommentSmart.createdAt,
-      likesInfo: {
-        likesCount: findCommentSmart.likesInfo.likesCount,
-        dislikesCount: findCommentSmart.likesInfo.dislikesCount,
-        myStatus: userStatus,
-      },
     };
   }
 }

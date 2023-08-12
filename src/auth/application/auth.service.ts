@@ -5,7 +5,6 @@ import {
   UsersTableType,
 } from '../../core/models';
 import { BcryptAdapter } from '../../adapters';
-import { BlogModelType, UserModelType } from '../../core/entity';
 import { AuthRepository } from '../repository/auth.repository';
 import { isAfter } from 'date-fns';
 
@@ -15,21 +14,6 @@ export class AuthService {
     protected authRepository: AuthRepository,
     protected bcryptAdapter: BcryptAdapter,
   ) {}
-
-  async userBlockedToBlog(userID: string, blogID: string): Promise<boolean> {
-    const blockedUserArray: BlogModelType | null =
-      await this.authRepository.userBlockedToBlog(userID, blogID);
-
-    let findBanUser = false;
-
-    blockedUserArray.banAllUsersInfo.map((v) => {
-      if (v.id === userID && v.banInfo.isBanned === true) {
-        findBanUser = true;
-      }
-    });
-
-    return findBanUser;
-  }
 
   async checkedConfirmCode(codeConfirm: string): Promise<boolean> {
     const rawUser: UsersTableType[] = await this.authRepository.findUserByCode(
@@ -87,17 +71,6 @@ export class AuthService {
     }
 
     return true;
-  }
-
-  async findUserLoginNotChecked(userID: string): Promise<string | null> {
-    const findUser: UserModelType | null =
-      await this.authRepository.findUserById(userID);
-
-    if (!findUser) {
-      return null;
-    }
-
-    return findUser.login;
   }
 
   async findUserLogin(userID: string): Promise<string> {

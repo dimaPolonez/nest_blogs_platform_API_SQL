@@ -22,11 +22,6 @@ export type UpdateBlogType = {
   websiteUrl: string;
 };
 
-export type BindBlogType = {
-  userId: string;
-  userLogin: string;
-};
-
 export type QueryBlogType = {
   searchNameTerm: string;
   sortBy: string;

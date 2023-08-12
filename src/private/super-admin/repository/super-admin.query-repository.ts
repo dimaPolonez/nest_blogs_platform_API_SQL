@@ -1,41 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Injectable } from '@nestjs/common';
 import {
   BlogsTableType,
   GetAllBlogsAdminType,
-  GetAllBlogsType,
   GetAllUsersAdminType,
   GetBlogAdminType,
   GetUserAdminType,
   QueryBlogType,
   QueryUsersAdminType,
   TablesNames,
-  UsersTableType,
 } from '../../../core/models';
-import {
-  BlogModel,
-  BlogModelType,
-  UserModel,
-  UserModelType,
-} from '../../../core/entity';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
 @Injectable()
 export class SuperAdminQueryRepository {
   constructor(
-    @InjectModel(BlogModel.name)
-    private readonly BlogModel: Model<BlogModelType>,
-    @InjectModel(UserModel.name)
-    private readonly UserModel: Model<UserModelType>,
     @InjectDataSource()
     protected dataSource: DataSource,
   ) {}
-
-  sortObject(sortDir: string) {
-    return sortDir === 'desc' ? -1 : 1;
-  }
   skippedObject(pageNum: number, pageSize: number) {
     return (pageNum - 1) * pageSize;
   }

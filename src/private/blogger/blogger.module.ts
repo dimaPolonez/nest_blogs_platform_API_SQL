@@ -1,16 +1,5 @@
 import { CqrsModule } from '@nestjs/cqrs';
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import {
-  BlogModel,
-  BlogModelSchema,
-  CommentModel,
-  CommentModelSchema,
-  PostModel,
-  PostModelSchema,
-  UserModel,
-  UserModelSchema,
-} from '../../core/entity';
 import { BloggerController } from './blogger.controller';
 import { BloggerRepository } from './repository/blogger.repository';
 import { BloggerQueryRepository } from './repository/blogger.query-repository';
@@ -37,14 +26,7 @@ const useCases = [
   BanUserOfBlogUseCase,
 ];
 @Module({
-  imports: [
-    MongooseModule.forFeature([
-      { name: BlogModel.name, schema: BlogModelSchema },
-      { name: PostModel.name, schema: PostModelSchema },
-      { name: CommentModel.name, schema: CommentModelSchema },
-    ]),
-    ...modules,
-  ],
+  imports: [...modules],
   controllers: [BloggerController],
   providers: [BloggerRepository, BloggerQueryRepository, ...useCases],
 })
