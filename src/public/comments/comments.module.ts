@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { CommentsController } from './comments.controller';
 import { CommentsRepository } from './repository/comments.repository';
 import { CommentsQueryRepository } from './repository/comments.query-repository';
-import { CommentModel, CommentModelSchema } from '../../core/entity';
 import { CqrsModule } from '@nestjs/cqrs';
 import {
   DeleteCommentUseCase,
@@ -21,12 +19,7 @@ const useCases = [
 ];
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([
-      { name: CommentModel.name, schema: CommentModelSchema },
-    ]),
-    ...modules,
-  ],
+  imports: [...modules],
   controllers: [CommentsController],
   providers: [CommentsRepository, CommentsQueryRepository, ...useCases],
 })

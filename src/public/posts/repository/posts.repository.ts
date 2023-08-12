@@ -1,11 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import {
-  CommentModelType,
-  PostModel,
-  PostModelType,
-} from '../../../core/entity';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import {
@@ -22,8 +15,6 @@ export class PostsRepository {
   constructor(
     @InjectDataSource()
     protected dataSource: DataSource,
-    @InjectModel(PostModel.name)
-    private readonly PostModel: Model<PostModelType>,
   ) {}
 
   async findLikesToPost(
@@ -109,13 +100,5 @@ export class PostsRepository {
     const values = [blogID, userID];
 
     return await this.dataSource.query(text, values);
-  }
-
-  async findPostById(postID: string): Promise<PostModelType | null> {
-    return this.PostModel.findById({ _id: postID });
-  }
-
-  async save(model: PostModelType | CommentModelType) {
-    return await model.save();
   }
 }

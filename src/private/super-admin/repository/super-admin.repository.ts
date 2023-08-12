@@ -1,23 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import {
-  BlogModel,
-  BlogModelType,
-  CommentModel,
-  CommentModelType,
-  PostModel,
-  PostModelType,
-  UserModel,
-  UserModelType,
-} from '../../../core/entity';
 import {
   BanUserType,
   BlogsTableType,
   NewUserDTOType,
   TablesNames,
-  UpdateArrayCommentsType,
-  UpdateArrayPostsType,
   UsersTableType,
 } from '../../../core/models';
 import { InjectDataSource } from '@nestjs/typeorm';
@@ -28,22 +14,7 @@ export class SuperAdminRepository {
   constructor(
     @InjectDataSource()
     protected dataSource: DataSource,
-    @InjectModel(BlogModel.name)
-    private readonly BlogModel: Model<BlogModelType>,
-    @InjectModel(PostModel.name)
-    private readonly PostModel: Model<PostModelType>,
-    @InjectModel(CommentModel.name)
-    private readonly CommentModel: Model<CommentModelType>,
-    @InjectModel(UserModel.name)
-    private readonly UserModel: Model<UserModelType>,
   ) {}
-
-  async checkedUser(userID: string): Promise<UsersTableType[]> {
-    const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
-    const values = [userID];
-
-    return await this.dataSource.query(text, values);
-  }
 
   async createUser(newUserDTO: NewUserDTOType): Promise<UsersTableType[]> {
     const text = `INSERT INTO "${TablesNames.Users}"(login, "hushPass", email) 
@@ -94,63 +65,6 @@ export class SuperAdminRepository {
     return result[1];
   }
 
-  async updateAllPostsIsBanned(isBanned: boolean, userID: string) {
-    await this.PostModel.updateMany(
-      { 'extendedLikesInfo.newestLikes.userId': userID },
-      { $set: { 'extendedLikesInfo.newestLikes.$.isBanned': isBanned } },
-    );
-
-    return this.PostModel.find({});
-  }
-
-  async updateAllCommentIsBanned(isBanned: boolean, userID: string) {
-    await this.CommentModel.updateMany(
-      { 'likesInfo.newestLikes.userId': userID },
-      { $set: { 'likesInfo.newestLikes.$.isBanned': isBanned } },
-    );
-
-    return this.CommentModel.find({});
-  }
-
-  async updateAllPostsCounterLikes(updateArrayPosts: UpdateArrayPostsType[]) {
-    if (updateArrayPosts.length > 0) {
-      for (let i = 0; i < updateArrayPosts.length; i++) {
-        await this.PostModel.updateMany(
-          { _id: updateArrayPosts[i].postID },
-          {
-            $set: {
-              'extendedLikesInfo.likesCount': updateArrayPosts[i].likesCount,
-              'extendedLikesInfo.dislikesCount':
-                updateArrayPosts[i].dislikesCount,
-            },
-          },
-        );
-      }
-    }
-  }
-
-  async updateAllCommentsCounterLikes(
-    updateArrayComments: UpdateArrayCommentsType[],
-  ) {
-    if (updateArrayComments.length > 0) {
-      for (let i = 0; i < updateArrayComments.length; i++) {
-        await this.CommentModel.updateMany(
-          { _id: updateArrayComments[i].commentID },
-          {
-            $set: {
-              'likesInfo.likesCount': updateArrayComments[i].likesCount,
-              'likesInfo.dislikesCount': updateArrayComments[i].dislikesCount,
-            },
-          },
-        );
-      }
-    }
-  }
-
-  async findBlogById(blogID: string): Promise<BlogModelType | null> {
-    return this.BlogModel.findById({ _id: blogID });
-  }
-
   async findUserByIdSql(userID: string): Promise<UsersTableType[]> {
     const text = `SELECT * FROM "${TablesNames.Users}" WHERE "id" = $1`;
     const values = [userID];
@@ -180,10 +94,6 @@ export class SuperAdminRepository {
     const result = await this.dataSource.query(text, values);
 
     return result[1];
-  }
-
-  async save(model: BlogModelType | PostModelType | UserModelType) {
-    return await model.save();
   }
 
   async deleteAllCollections() {

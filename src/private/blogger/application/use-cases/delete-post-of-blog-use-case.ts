@@ -1,13 +1,6 @@
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BloggerRepository } from '../../repository/blogger.repository';
-import {
-  BlogModelType,
-  PostModel,
-  PostModelType,
-} from '../../../../core/entity';
 import { BlogsTableType } from '../../../../core/models';
 
 export class DeletePostOfBlogToBloggerCommand {
@@ -22,11 +15,7 @@ export class DeletePostOfBlogToBloggerCommand {
 export class DeletePostOfBlogToBloggerUseCase
   implements ICommandHandler<DeletePostOfBlogToBloggerCommand>
 {
-  constructor(
-    protected bloggerRepository: BloggerRepository,
-    @InjectModel(PostModel.name)
-    private readonly PostModel: Model<PostModelType>,
-  ) {}
+  constructor(protected bloggerRepository: BloggerRepository) {}
 
   async execute(command: DeletePostOfBlogToBloggerCommand) {
     const { bloggerId, blogID, postID } = command;

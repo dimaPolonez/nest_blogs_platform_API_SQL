@@ -1,13 +1,6 @@
-import {
-  IsBoolean,
-  IsMongoId,
-  IsNotEmpty,
-  Length,
-  Validate,
-} from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsUUID, Length } from 'class-validator';
 import { BanUserOfBlogType } from '../../models';
 import { TrimDecorator } from '../../../validation/decorators/trim.decorator';
-import { BlogIdPipe } from '../../../validation/pipes/blogId.pipe';
 
 export class BanUserOfBlogDto implements BanUserOfBlogType {
   @TrimDecorator()
@@ -22,6 +15,6 @@ export class BanUserOfBlogDto implements BanUserOfBlogType {
 
   @TrimDecorator()
   @IsNotEmpty()
-  @Validate(BlogIdPipe)
+  @IsUUID()
   readonly blogId: string;
 }

@@ -1,12 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import {
-  BlogModel,
-  BlogModelType,
-  UserModel,
-  UserModelType,
-} from '../../core/entity';
 import {
   AuthObjectType,
   ConfirmUserType,
@@ -23,10 +15,6 @@ export class AuthRepository {
   constructor(
     @InjectDataSource()
     protected dataSource: DataSource,
-    @InjectModel(UserModel.name)
-    private readonly UserModel: Model<UserModelType>,
-    @InjectModel(BlogModel.name)
-    private readonly BlogModel: Model<BlogModelType>,
   ) {}
 
   async recoveryCode(
@@ -152,7 +140,7 @@ export class AuthRepository {
     return await this.dataSource.query(text, values);
   }
 
-  async logoutUser(deviceID: string) {
+  async logoutUser(deviceID: string): Promise<number> {
     const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "id" = $1`;
 
     const values = [deviceID];
@@ -162,7 +150,7 @@ export class AuthRepository {
     return result[1];
   }
 
-  async deleteAllSession(userID: string, deviceID: string) {
+  async deleteAllSession(userID: string, deviceID: string): Promise<number> {
     const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "userId" = $1 AND "id" <> $2`;
 
     const values = [userID, deviceID];
@@ -172,7 +160,7 @@ export class AuthRepository {
     return result[1];
   }
 
-  async deleteOneSession(deviceID: string) {
+  async deleteOneSession(deviceID: string): Promise<number> {
     const text = `DELETE FROM "${TablesNames.SessionsUsersInfo}" WHERE "id" = $1`;
 
     const values = [deviceID];
@@ -181,17 +169,6 @@ export class AuthRepository {
 
     return result[1];
   }
-
-  async userBlockedToBlog(userID: string, blogID: string) {
-    return this.BlogModel.findById({
-      _id: blogID,
-    });
-  }
-
-  async findUserById(userID: string): Promise<UserModelType | null> {
-    return this.UserModel.findById({ _id: userID });
-  }
-
   async findUserByCode(code: string): Promise<UsersTableType[]> {
     const text = `SELECT * FROM "${TablesNames.Users}" WHERE "codeActivated" = $1`;
 
@@ -213,9 +190,5 @@ export class AuthRepository {
     const values = [login];
 
     return await this.dataSource.query(text, values);
-  }
-
-  async save(model: UserModelType) {
-    return await model.save();
   }
 }

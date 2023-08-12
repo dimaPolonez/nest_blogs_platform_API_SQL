@@ -12,13 +12,6 @@ import {
   CheckedUniqueLogin,
 } from '../validation/class-validators';
 import { ActiveCodeAdapter, BcryptAdapter, MailerAdapter } from '../adapters';
-import { MongooseModule } from '@nestjs/mongoose';
-import {
-  BlogModel,
-  BlogModelSchema,
-  UserModel,
-  UserModelSchema,
-} from '../core/entity';
 import { AuthRepository } from './repository/auth.repository';
 import {
   ConfirmEmailUseCase,
@@ -63,10 +56,6 @@ const useCases = [
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: UserModel.name, schema: UserModelSchema },
-      { name: BlogModel.name, schema: BlogModelSchema },
-    ]),
     ThrottlerModule.forRoot({
       ttl: 10,
       limit: 5,

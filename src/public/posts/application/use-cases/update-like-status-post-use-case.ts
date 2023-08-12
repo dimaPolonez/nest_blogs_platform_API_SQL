@@ -1,5 +1,4 @@
 import {
-  BlogsTableType,
   ExtendedLikesPostInfoType,
   MyLikeStatus,
   PostsTableType,

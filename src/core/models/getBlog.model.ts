@@ -1,5 +1,3 @@
-import { BanUserOfBlogDto } from '../dto/blogs';
-
 export type GetBlogType = {
   id: string;
   name: string;
@@ -7,10 +5,6 @@ export type GetBlogType = {
   websiteUrl: string;
   createdAt: string;
   isMembership: boolean;
-};
-
-export type MinimalBlog = {
-  id: string;
 };
 
 type BlogOwnerType = {
